@@ -1,0 +1,15 @@
+# Образы для контейнера
+FROM ghcr.io/vlmhyperbenchteam/qwen2.5-vl:ubuntu22.04-cu124-torch2.4.0_v0.1.0
+
+# Отключаем интерактивные вопросы при установке пакетов
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN pip install --no-cache-dir peft==0.14.0
+RUN pip install --no-cache-dir bitsandbytes==0.46.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
+RUN pip install --no-cache-dir datasets -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# Создаем рабочую директорию
+WORKDIR /workspace
+
+# Запускаем терминал
+CMD ["/bin/bash"]
