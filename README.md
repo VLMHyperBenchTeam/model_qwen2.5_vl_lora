@@ -47,6 +47,27 @@ cd cd workspace
 python run_vqa.py
 ```
 
+# Скачивание
+## промптов
+
+```
+docker run \
+    --gpus all \
+    -it \
+    -v .:/workspace \
+    ghcr.io/vlmhyperbenchteam/qwen2.5-vl:ubuntu22.04-cu124-torch2.4.0_v0.1.0 python downloaders/download_prompts.py
+```
+
+## датасета для обучения
+
+```
+docker run \
+    --gpus all \
+    -it \
+    -v .:/workspace \
+    ghcr.io/vlmhyperbenchteam/qwen2.5-vl:ubuntu22.04-cu124-torch2.4.0_v0.1.0 python downloaders/download_dataset.py
+```
+
 # Ключевые особенности моделей Qwen2-VL
 
 1. Открытая лицензия - Apache-2.0 (Qwen2-VL-2B, Qwen2.5-VL-7B)
