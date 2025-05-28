@@ -4,9 +4,13 @@ FROM ghcr.io/vlmhyperbenchteam/qwen2.5-vl:ubuntu22.04-cu124-torch2.4.0_v0.1.0
 # Отключаем интерактивные вопросы при установке пакетов
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN pip install --no-cache-dir peft==0.14.0
-RUN pip install --no-cache-dir bitsandbytes==0.46.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
-RUN pip install --no-cache-dir datasets -i https://pypi.tuna.tsinghua.edu.cn/simple
+# Установка китайского mirror (например, Alibaba mirror)
+RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple
+
+# Установка библиотек
+RUN pip install --no-cache-dir peft==0.14.0 bitsandbytes==0.46.0 datasets==3.2.0 gdown==5.2.0
+RUN pip install --no-cache-dir git+https://github.com/VLMHyperBenchTeam/model_qwen2.5-vl.git@0.1.0
+RUN pip install --no-cache-dir scikit-learn==1.6.1
 
 # Создаем рабочую директорию
 WORKDIR /workspace
