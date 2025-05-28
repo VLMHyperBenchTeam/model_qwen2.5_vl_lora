@@ -68,6 +68,11 @@ docker run \
     ghcr.io/vlmhyperbenchteam/qwen2.5-vl:ubuntu22.04-cu124-torch2.4.0_v0.1.0 python downloaders/download_dataset.py
 ```
 
+Разархивируем датасет
+```
+unzip dataset_for_training.zip
+```
+
 # Ключевые особенности моделей Qwen2-VL
 
 1. Открытая лицензия - Apache-2.0 (Qwen2-VL-2B, Qwen2.5-VL-7B)
