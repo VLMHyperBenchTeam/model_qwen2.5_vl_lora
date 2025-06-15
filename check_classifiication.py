@@ -42,33 +42,34 @@ def initialize_model(config: Dict[str, Any]) -> Any:
     """Инициализирует и возвращает модель согласно конфигурации.
 
     Args:
-        config (Dict[str, Any]): Словарь конфигурации, содержащий параметры
-            для инициализации модели, такие как 'model_family', 'model_name',
-            'cache_dir', 'device_map', 'package', 'module', 'model_class'.
+        config (Dict[str, Any]): Словарь конфигурации, содержащий секции
+            'model' с параметрами для инициализации модели.
 
     Returns:
         Any: Инициализированный объект модели.
     """
-    model_family = config["model_family"]
-    cache_dir = Path(config["cache_dir"])
+    model_config = config["model"]
+
+    model_family = model_config["model_family"]
+    cache_dir = Path(model_config["cache_dir"])
     cache_dir.mkdir(exist_ok=True)
 
     # Формируем путь к классу модели из конфигурации
-    package = config["package"]
-    module = config["module"]
-    model_class = config["model_class"]
+    package = model_config["package"]
+    module = model_config["module"]
+    model_class = model_config["model_class"]
     model_class_path = f"{package}.{module}:{model_class}"
 
     # Регистрация модели в фабрике
     ModelFactory.register_model(model_family, model_class_path)
 
     model_params = {
-        "model_name": config["model_name"],
-        "system_prompt": config.get("system_prompt", ""),
-        "cache_dir": config["cache_dir"],
-        "device_map": config["device_map"],
+        "model_name": model_config["model_name"],
+        "system_prompt": model_config.get("system_prompt", ""),
+        "cache_dir": model_config["cache_dir"],
+        "device_map": model_config["device_map"],
     }
-    print(f"Инициализация модели: {config['model_name']}")
+    print(f"Инициализация модели: {model_config['model_name']}")
     return ModelFactory.get_model(model_family, model_params)
 
 
@@ -201,11 +202,15 @@ def run_evaluation(config: Dict[str, Any]) -> None:
     итоговых средних метрик.
 
     Args:
-        config (Dict[str, Any]): Словарь с полной конфигурацией для запуска.
+        config (Dict[str, Any]): Словарь с полной конфигурацией для запуска,
+                                содержащий секции 'task' и 'model'.
     """
-    dataset_path = Path(config["dataset_path"])
-    prompt_path = Path(config["prompt_path"])
-    sample_size = config.get("sample_size")
+    task_config = config["task"]
+    model_config = config["model"]
+
+    dataset_path = Path(task_config["dataset_path"])
+    prompt_path = Path(task_config["prompt_path"])
+    sample_size = task_config.get("sample_size")
 
     model = initialize_model(config)
 
@@ -215,10 +220,10 @@ def run_evaluation(config: Dict[str, Any]) -> None:
     )
     prompt = prompt_template.format(classes=classes_str)
 
-    run_id = Path(config["model_name"]).stem
+    run_id = Path(model_config["model_name"]).stem
     all_metrics = []
 
-    for subset in config["subsets"]:
+    for subset in task_config["subsets"]:
         image_paths = get_image_paths(
             dataset_path, list(document_classes.keys()), subset, sample_size
         )

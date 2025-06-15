@@ -1,14 +1,18 @@
 {
-    "dataset_path": "./dataset",
-    "prompt_path": "./prompts/classification.txt",
-    "model_name": "Qwen2.5-VL-3B-Instruct",
-    "model_family": "Qwen2.5-VL",
-    "device_map": "cuda:0",
-    "cache_dir": "./model_cache",
-    "package": "model_qwen2_5_vl",
-    "module": "models",
-    "model_class": "Qwen2_5_VLModel",
-    "system_prompt": "",
-    "subsets": ["clean"],
-    "sample_size": 3 
+    "task": {
+        "dataset_path": "./dataset",
+        "prompt_path": "./prompts/classification.txt",
+        "subsets": ["clean"],
+        "sample_size": 3
+    },
+    "model": {
+        "model_name": "Qwen2.5-VL-3B-Instruct",
+        "model_family": "Qwen2.5-VL",
+        "device_map": "cuda:0",
+        "cache_dir": "./model_cache",
+        "package": "model_qwen2_5_vl",
+        "module": "models",
+        "model_class": "Qwen2_5_VLModel",
+        "system_prompt": ""
+    }
 }
