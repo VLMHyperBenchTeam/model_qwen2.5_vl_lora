@@ -1,5 +1,3 @@
-# Описание модели для Benchmark
-
 # Docker контейнер модели
 
 Поддерживаются модели:
@@ -10,12 +8,12 @@ P.S. Укажите одно из следующих названий при и�
 * Qwen2.5-VL-3B-Instruct
 * Qwen2.5-VL-7B-Instruct
 
+## Скачать к себе Docker-образ
 
-## Build Docker image
+Docker-образ опубликован на `GitHub Packages Container Registry`([ссылка](https://github.com/VLMHyperBenchTeam/model_qwen2.5-vl/pkgs/container/qwen2.5-vl/438485241?tag=ubuntu22.04-cu124-torch2.4.0_eval_v0.1.0)).
 
-Для сборки `Docker image` выполним команду:
 ```
-docker build -t ghcr.io/vlmhyperbenchteam/qwen2.5-vl:ubuntu22.04-cu124-torch2.4.0_eval_v0.1.0 -f docker/Dockerfile-cu124_eval .
+docker pull ghcr.io/vlmhyperbenchteam/qwen2.5-vl:ubuntu22.04-cu124-torch2.4.0_eval_v0.1.0
 ```
 
 ## Run Docker Container
@@ -37,15 +35,24 @@ cd cd workspace
 python run_vqa.py
 ```
 
-# Скачивание
-## промптов
+## Build Docker image
+
+Для сборки `Docker image` выполним команду:
+```
+docker build -t ghcr.io/vlmhyperbenchteam/qwen2.5-vl:ubuntu22.04-cu124-torch2.4.0_eval_v0.1.0 -f docker/Dockerfile-cu124_eval .
+```
+
+
+
+# Скачивание данных и промптов
+## промптов (старые из Google)
 
 ```
 docker run \
     --gpus all \
     -it \
     -v .:/workspace \
-    ghcr.io/vlmhyperbenchteam/qwen2.5-vl:ubuntu22.04-cu124-torch2.4.0_v0.1.0 python downloaders/download_prompts.py
+    ghcr.io/vlmhyperbenchteam/qwen2.5-vl:ubuntu22.04-cu124-torch2.4.0_eval_v0.1.0 python downloaders/download_prompts.py
 ```
 
 ## датасета для обучения (старый из Google)
@@ -57,7 +64,7 @@ docker run \
     --gpus all \
     -it \
     -v .:/workspace \
-    ghcr.io/vlmhyperbenchteam/qwen2.5-vl:ubuntu22.04-cu124-torch2.4.0_v0.1.0 python downloaders/download_dataset.py
+    ghcr.io/vlmhyperbenchteam/qwen2.5-vl:ubuntu22.04-cu124-torch2.4.0_eval_v0.1.0 python downloaders/download_dataset.py
 ```
 
 ## Разархивируем датасет для обучения (актуальный из mail.ru)
@@ -96,4 +103,9 @@ my_project/
 ├── README.md
 ├── requirements.txt
 └── setup.py
+```
+
+# Subsets
+```
+"subsets": ["blur", "noise", "clean", "bright", "gray", "rotated", "spatter"],
 ```
