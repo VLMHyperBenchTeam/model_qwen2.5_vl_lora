@@ -13,3 +13,6 @@ prompts
 
 # ignore output
 output
+
+# ignore csv reports
+*.csv
