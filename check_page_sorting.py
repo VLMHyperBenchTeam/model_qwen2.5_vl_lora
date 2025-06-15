@@ -92,7 +92,9 @@ def get_image_paths_for_document(
     return image_files
 
 
-def get_document_ids(dataset_path: Path, subset_name: str, sample_size: Optional[int] = None) -> List[str]:
+def get_document_ids(
+    dataset_path: Path, subset_name: str, sample_size: Optional[int] = None
+) -> List[str]:
     """Получает список ID документов в указанном подмножестве.
 
     Args:
@@ -109,10 +111,10 @@ def get_document_ids(dataset_path: Path, subset_name: str, sample_size: Optional
         return []
 
     document_ids = [d.name for d in subset_dir.iterdir() if d.is_dir()]
-    
+
     if sample_size is not None:
         document_ids = document_ids[:sample_size]
-    
+
     return document_ids
 
 
@@ -135,6 +137,62 @@ def load_ground_truth(dataset_path: Path, document_id: str) -> List[int]:
 
     # Преобразуем индексы из 0-based в 1-based
     true_order = data["fields"]["interest_free_loan_agreement"]
+    return [i + 1 for i in true_order]
+
+
+def get_document_type_from_config(config: Dict[str, Any], dataset_path: Path) -> str:
+    """Определяет тип документа из конфигурации на основе пути к датасету.
+
+    Args:
+        config (Dict[str, Any]): Словарь конфигурации.
+        dataset_path (Path): Путь к датасету.
+
+    Returns:
+        str: Русское название типа документа.
+    """
+    document_classes = config.get("document_classes", {})
+
+    # Извлекаем тип документа из пути
+    dataset_name = dataset_path.name
+
+    # Ищем соответствующий класс документа
+    for doc_type, doc_name in document_classes.items():
+        if doc_type in dataset_name:
+            return doc_name
+
+    # Если не найден, возвращаем название папки с заглавной буквы
+    return dataset_name.replace("_", " ").title()
+
+
+def load_ground_truth_dynamic(
+    dataset_path: Path, document_id: str, document_type_key: str
+) -> List[int]:
+    """Загружает правильный порядок страниц из JSON файла для любого типа документа.
+
+    Args:
+        dataset_path (Path): Корневой путь к датасету.
+        document_id (str): Идентификатор документа.
+        document_type_key (str): Ключ типа документа в JSON файле.
+
+    Returns:
+        List[int]: Правильный порядок страниц (индексы от 1).
+    """
+    json_file = dataset_path / "jsons" / f"{document_id}.json"
+    if not json_file.exists():
+        return []
+
+    with json_file.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Ищем ключ типа документа в fields
+    fields = data.get("fields", {})
+    if document_type_key not in fields:
+        print(f"Ключ '{document_type_key}' не найден в файле {json_file}")
+        print(f"Доступные ключи: {list(fields.keys())}")
+        return []
+
+    # Преобразуем индексы из 0-based в 1-based
+    true_order = fields[document_type_key]
     return [i + 1 for i in true_order]
 
 
@@ -409,12 +467,28 @@ def run_evaluation(config: Dict[str, Any]) -> None:
     dataset_path = Path(task_config["dataset_path"])
     prompt_path = Path(task_config["prompt_path"])
     sample_size = task_config.get("sample_size")
-    output_base_dir = Path(config.get("output_dir", "output"))
+    output_base_dir = Path(task_config["output_dir"])  # Теперь берем из task
 
     model = initialize_model(config)
 
     prompt = prompt_path.read_text(encoding="utf-8")
     run_id = Path(model_config["model_name"]).stem
+
+    # Определяем тип документа
+    document_type_name = get_document_type_from_config(config, dataset_path)
+    print(f"Обрабатываем документы типа: {document_type_name}")
+
+    # Определяем ключ для поиска в JSON файлах
+    document_type_key = None
+    for key, name in config.get("document_classes", {}).items():
+        if key in dataset_path.name:
+            document_type_key = key
+            break
+
+    if not document_type_key:
+        print(f"Не удалось определить ключ документа для пути {dataset_path}")
+        return
+
     all_subset_metrics = []
 
     for subset in task_config["subsets"]:
@@ -447,8 +521,10 @@ def run_evaluation(config: Dict[str, Any]) -> None:
                 )
                 continue
 
-            # Загружаем правильный порядок
-            true_order = load_ground_truth(dataset_path, doc_id)
+            # Загружаем правильный порядок с использованием динамического ключа
+            true_order = load_ground_truth_dynamic(
+                dataset_path, doc_id, document_type_key
+            )
             if not true_order:
                 print(f"Не удалось загрузить правильный порядок для документа {doc_id}")
                 continue
@@ -479,7 +555,7 @@ def run_evaluation(config: Dict[str, Any]) -> None:
         final_df = pd.DataFrame(all_subset_metrics)
         overall_metrics = final_df.mean()
 
-        print("\n📊 Средние метрики по всем сабсетам:")
+        print(f"\n📊 Средние метрики по всем сабсетам для {document_type_name}:")
         print(f"  Средняя точность (Accuracy): {overall_metrics['accuracy']:.4f}")
         print(f"  Средний Kendall Tau: {overall_metrics['kendall_tau']:.4f}")
         print(f"  Средний Spearman Rho: {overall_metrics['spearman_rho']:.4f}")
