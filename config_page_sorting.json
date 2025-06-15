@@ -1,11 +1,19 @@
 {
-    "dataset_path": "./dataset/interest_free_loan_agreement",
-    "prompt_path": "./prompts/page_sorting.txt",
-    "model_name": "Qwen2.5-VL-3B-Instruct",
-    "model_family": "Qwen2.5-VL",
-    "device_map": "cuda:0",
-    "cache_dir": "./model_cache",
-    "output_dir": "./output",
-    "subsets": ["clean"],
-    "sample_size": null
+    "task": {
+        "dataset_path": "./dataset/interest_free_loan_agreement",
+        "prompt_path": "./prompts/page_sorting.txt",
+        "subsets": ["clean"],
+        "sample_size": null
+    },
+    "model": {
+        "model_name": "Qwen2.5-VL-3B-Instruct",
+        "model_family": "Qwen2.5-VL",
+        "device_map": "cuda:0",
+        "cache_dir": "./model_cache",
+        "package": "model_qwen2_5_vl",
+        "module": "models",
+        "model_class": "Qwen2_5_VLModel",
+        "system_prompt": ""
+    },
+    "output_dir": "./output"
 }

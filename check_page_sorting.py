@@ -32,26 +32,34 @@ def initialize_model(config: Dict[str, Any]) -> Any:
     """Инициализирует и возвращает модель согласно конфигурации.
 
     Args:
-        config (Dict[str, Any]): Словарь конфигурации, содержащий параметры
-            для инициализации модели, такие как 'model_family', 'model_name',
-            'cache_dir', и 'device_map'.
+        config (Dict[str, Any]): Словарь конфигурации, содержащий секции
+            'model' с параметрами для инициализации модели.
 
     Returns:
         Any: Инициализированный объект модели.
     """
-    model_family = config["model_family"]
-    cache_dir = Path(config["cache_dir"])
+    model_config = config["model"]
+
+    model_family = model_config["model_family"]
+    cache_dir = Path(model_config["cache_dir"])
     cache_dir.mkdir(exist_ok=True)
 
-    ModelFactory.register_model(model_family, "model_qwen2_5_vl.models:Qwen2_5_VLModel")
+    # Формируем путь к классу модели из конфигурации
+    package = model_config["package"]
+    module = model_config["module"]
+    model_class = model_config["model_class"]
+    model_class_path = f"{package}.{module}:{model_class}"
+
+    # Регистрация модели в фабрике
+    ModelFactory.register_model(model_family, model_class_path)
 
     model_params = {
-        "model_name": config["model_name"],
-        "system_prompt": "",
-        "cache_dir": str(cache_dir),
-        "device_map": config["device_map"],
+        "model_name": model_config["model_name"],
+        "system_prompt": model_config.get("system_prompt", ""),
+        "cache_dir": model_config["cache_dir"],
+        "device_map": model_config["device_map"],
     }
-    print(f"Инициализация модели: {config['model_name']}")
+    print(f"Инициализация модели: {model_config['model_name']}")
     return ModelFactory.get_model(model_family, model_params)
 
 
@@ -84,12 +92,14 @@ def get_image_paths_for_document(
     return image_files
 
 
-def get_document_ids(dataset_path: Path, subset_name: str) -> List[str]:
+def get_document_ids(dataset_path: Path, subset_name: str, sample_size: Optional[int] = None) -> List[str]:
     """Получает список ID документов в указанном подмножестве.
 
     Args:
         dataset_path (Path): Корневой путь к датасету.
         subset_name (str): Имя подмножества.
+        sample_size (Optional[int]): Количество документов для выборки.
+                                   Если None, обрабатываются все документы.
 
     Returns:
         List[str]: Список ID документов.
@@ -98,7 +108,12 @@ def get_document_ids(dataset_path: Path, subset_name: str) -> List[str]:
     if not subset_dir.exists():
         return []
 
-    return [d.name for d in subset_dir.iterdir() if d.is_dir()]
+    document_ids = [d.name for d in subset_dir.iterdir() if d.is_dir()]
+    
+    if sample_size is not None:
+        document_ids = document_ids[:sample_size]
+    
+    return document_ids
 
 
 def load_ground_truth(dataset_path: Path, document_id: str) -> List[int]:
@@ -380,32 +395,36 @@ def calculate_and_save_metrics(
 def run_evaluation(config: Dict[str, Any]) -> None:
     """Основной цикл оценки модели для задачи упорядочивания страниц.
 
+    Оркестрирует весь процесс: от загрузки конфигурации и инициализации
+    модели до итерации по подмножествам, сбора предсказаний и расчета
+    итоговых средних метрик.
+
     Args:
-        config (Dict[str, Any]): Словарь с полной конфигурацией для запуска.
+        config (Dict[str, Any]): Словарь с полной конфигурацией для запуска,
+                                содержащий секции 'task' и 'model'.
     """
-    dataset_path = Path(config["dataset_path"])
-    prompt_path = Path(config["prompt_path"])
+    task_config = config["task"]
+    model_config = config["model"]
+
+    dataset_path = Path(task_config["dataset_path"])
+    prompt_path = Path(task_config["prompt_path"])
+    sample_size = task_config.get("sample_size")
     output_base_dir = Path(config.get("output_dir", "output"))
 
     model = initialize_model(config)
 
     prompt = prompt_path.read_text(encoding="utf-8")
-    run_id = Path(config["model_name"]).stem
+    run_id = Path(model_config["model_name"]).stem
     all_subset_metrics = []
 
-    for subset in config["subsets"]:
+    for subset in task_config["subsets"]:
         print(f"\n📂 Обработка сабсета: {subset}")
 
         # Получаем список документов в подмножестве
-        document_ids = get_document_ids(dataset_path, subset)
+        document_ids = get_document_ids(dataset_path, subset, sample_size)
         if not document_ids:
             print(f"Нет документов в сабсете {subset}")
             continue
-
-        # Применяем ограничение по количеству документов если указано
-        sample_size = config.get("sample_size")
-        if sample_size:
-            document_ids = document_ids[:sample_size]
 
         print(f"Найдено документов для обработки: {len(document_ids)}")
 
