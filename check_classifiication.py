@@ -44,7 +44,7 @@ def initialize_model(config: Dict[str, Any]) -> Any:
     Args:
         config (Dict[str, Any]): Словарь конфигурации, содержащий параметры
             для инициализации модели, такие как 'model_family', 'model_name',
-            'cache_dir', и 'device_map'.
+            'cache_dir', 'device_map', 'package', 'module', 'model_class'.
 
     Returns:
         Any: Инициализированный объект модели.
@@ -53,12 +53,19 @@ def initialize_model(config: Dict[str, Any]) -> Any:
     cache_dir = Path(config["cache_dir"])
     cache_dir.mkdir(exist_ok=True)
 
-    ModelFactory.register_model(model_family, "model_qwen2_5_vl.models:Qwen2_5_VLModel")
+    # Формируем путь к классу модели из конфигурации
+    package = config["package"]
+    module = config["module"]
+    model_class = config["model_class"]
+    model_class_path = f"{package}.{module}:{model_class}"
+
+    # Регистрация модели в фабрике
+    ModelFactory.register_model(model_family, model_class_path)
 
     model_params = {
         "model_name": config["model_name"],
-        "system_prompt": "",
-        "cache_dir": str(cache_dir),
+        "system_prompt": config.get("system_prompt", ""),
+        "cache_dir": config["cache_dir"],
         "device_map": config["device_map"],
     }
     print(f"Инициализация модели: {config['model_name']}")
