@@ -13,11 +13,6 @@ from sklearn.metrics import (
 )
 from tqdm import tqdm
 
-from document_classes import document_classes
-
-# Создаем обратное отображение для быстрого поиска ключа класса.
-CLASS_NAMES_TO_KEYS = {v: k for k, v in document_classes.items()}
-
 
 def load_config(config_path: str = "config_classification.json") -> Dict[str, Any]:
     """Загружает конфигурацию из JSON файла.
@@ -116,13 +111,16 @@ def get_image_paths(
     return selected_files
 
 
-def get_prediction(model: Any, image_path: Path, prompt: str) -> str:
+def get_prediction(
+    model: Any, image_path: Path, prompt: str, document_classes: Dict[str, str]
+) -> str:
     """Получает предсказание модели для одного изображения.
 
     Args:
         model (Any): Инициализированный объект модели для классификации.
         image_path (Path): Путь к файлу изображения.
         prompt (str): Промпт, который будет подан модели вместе с изображением.
+        document_classes (Dict[str, str]): Словарь классов документов.
 
     Returns:
         str: Предсказанный ключ класса (например, 'invoice') или 'None'
@@ -137,7 +135,9 @@ def get_prediction(model: Any, image_path: Path, prompt: str) -> str:
             class_index = int(prediction)
             if 0 <= class_index < len(document_classes):
                 pred_class_name = list(document_classes.values())[class_index]
-                return CLASS_NAMES_TO_KEYS.get(pred_class_name, "None")
+                # Создаем обратное отображение для быстрого поиска ключа класса
+                class_names_to_keys = {v: k for k, v in document_classes.items()}
+                return class_names_to_keys.get(pred_class_name, "None")
         return "None"
 
     except Exception as e:
@@ -146,7 +146,11 @@ def get_prediction(model: Any, image_path: Path, prompt: str) -> str:
 
 
 def calculate_and_save_metrics(
-    y_true: List[str], y_pred: List[str], subset_name: str, run_id: str
+    y_true: List[str],
+    y_pred: List[str],
+    subset_name: str,
+    run_id: str,
+    document_classes: Dict[str, str],
 ) -> Dict[str, float]:
     """Вычисляет и сохраняет метрики, возвращает словарь с основными метриками.
 
@@ -158,6 +162,7 @@ def calculate_and_save_metrics(
         y_pred (List[str]): Список предсказанных меток классов.
         subset_name (str): Имя обрабатываемого подмножества.
         run_id (str): Уникальный идентификатор запуска для именования файлов.
+        document_classes (Dict[str, str]): Словарь классов документов.
 
     Returns:
         Dict[str, float]: Словарь с вычисленными средневзвешенными метриками
@@ -203,10 +208,11 @@ def run_evaluation(config: Dict[str, Any]) -> None:
 
     Args:
         config (Dict[str, Any]): Словарь с полной конфигурацией для запуска,
-                                содержащий секции 'task' и 'model'.
+                                содержащий секции 'task', 'model' и 'document_classes'.
     """
     task_config = config["task"]
     model_config = config["model"]
+    document_classes = config["document_classes"]
 
     dataset_path = Path(task_config["dataset_path"])
     prompt_path = Path(task_config["prompt_path"])
@@ -237,9 +243,11 @@ def run_evaluation(config: Dict[str, Any]) -> None:
         # Поэтому `class_name` это 4-й элемент с конца (индекс -4).
         for path in tqdm(image_paths, desc=f"Обработка {subset}"):
             y_true.append(path.parts[-4])
-            y_pred.append(get_prediction(model, path, prompt))
+            y_pred.append(get_prediction(model, path, prompt, document_classes))
 
-        subset_metrics = calculate_and_save_metrics(y_true, y_pred, subset, run_id)
+        subset_metrics = calculate_and_save_metrics(
+            y_true, y_pred, subset, run_id, document_classes
+        )
         if subset_metrics:
             all_metrics.append(subset_metrics)
 
