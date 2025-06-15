@@ -4,9 +4,10 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 from tqdm import tqdm
 
-from utils import load_config, get_run_id, save_results_to_csv
-from model_utils import initialize_model, load_prompt
-from metrics import calculate_classification_metrics
+from bench_utils.metrics import calculate_classification_metrics
+from bench_utils.model_utils import initialize_model, load_prompt
+from bench_utils.utils import get_run_id, load_config, save_results_to_csv
+
 
 def get_image_paths(
     dataset_path: Path,
@@ -50,6 +51,7 @@ def get_image_paths(
     print(f"Найдено файлов для обработки: {len(selected_files)}")
     return selected_files
 
+
 def get_prediction(
     model: Any, image_path: Path, prompt: str, document_classes: Dict[str, str]
 ) -> str:
@@ -83,6 +85,7 @@ def get_prediction(
         print(f"Ошибка при классификации файла {image_path.name}: {e}")
         return "None"
 
+
 def calculate_and_save_metrics(
     y_true: List[str],
     y_pred: List[str],
@@ -90,22 +93,6 @@ def calculate_and_save_metrics(
     run_id: str,
     document_classes: Dict[str, str],
 ) -> Dict[str, float]:
-    """Вычисляет и сохраняет метрики, возвращает словарь с основными метриками.
-
-    Создает отчет о классификации и CSV-файл с метриками для каждого класса,
-    а также CSV-файл с общими метриками (accuracy, f1, precision, recall).
-
-    Args:
-        y_true (List[str]): Список истинных меток классов.
-        y_pred (List[str]): Список предсказанных меток классов.
-        subset_name (str): Имя обрабатываемого подмножества.
-        run_id (str): Уникальный идентификатор запуска для именования файлов.
-        document_classes (Dict[str, str]): Словарь классов документов.
-
-    Returns:
-        Dict[str, float]: Словарь с вычисленными средневзвешенными метриками
-                          или пустой словарь, если данных для расчета нет.
-    """
     """Вычисляет и сохраняет метрики, возвращает словарь с основными метриками.
 
     Args:
@@ -121,11 +108,10 @@ def calculate_and_save_metrics(
     metrics = calculate_classification_metrics(y_true, y_pred, document_classes)
     if metrics:
         save_results_to_csv(
-            metrics, 
-            f"{run_id}_{subset_name}_classification_results.csv", 
-            subset_name
+            metrics, f"{run_id}_{subset_name}_classification_results.csv", subset_name
         )
     return metrics
+
 
 def run_evaluation(config: Dict[str, Any]) -> None:
     """Основной цикл оценки модели.
@@ -187,6 +173,7 @@ def run_evaluation(config: Dict[str, Any]) -> None:
 
         final_df.to_csv(f"{run_id}_final_classification_results.csv", index=False)
 
+
 def main() -> None:
     """Главная функция для запуска процесса классификации.
 
@@ -197,6 +184,7 @@ def main() -> None:
         run_evaluation(config)
     except (FileNotFoundError, KeyError) as e:
         print(f"Ошибка: {e}")
+
 
 if __name__ == "__main__":
     main()

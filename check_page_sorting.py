@@ -1,14 +1,19 @@
+import json
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-import re
-import json
 
 import pandas as pd
 from tqdm import tqdm
 
-from utils import load_config, get_run_id, save_results_to_csv, get_document_type_from_config
-from model_utils import initialize_model, load_prompt
-from metrics import calculate_ordering_metrics, kendalltau, spearmanr
+from bench_utils.metrics import calculate_ordering_metrics
+from bench_utils.model_utils import initialize_model, load_prompt
+from bench_utils.utils import (
+    get_document_type_from_config,
+    get_run_id,
+    load_config,
+)
+
 
 def get_image_paths_for_document(
     dataset_path: Path, document_id: str, subset_name: str
@@ -37,6 +42,7 @@ def get_image_paths_for_document(
 
     return image_files
 
+
 def get_document_ids(
     dataset_path: Path, subset_name: str, sample_size: Optional[int] = None
 ) -> List[str]:
@@ -61,6 +67,7 @@ def get_document_ids(
         document_ids = document_ids[:sample_size]
 
     return document_ids
+
 
 def load_ground_truth_dynamic(
     dataset_path: Path, document_id: str, document_type_key: str
@@ -91,6 +98,7 @@ def load_ground_truth_dynamic(
     true_order = fields[document_type_key]
     return [i + 1 for i in true_order]
 
+
 def extract_json_from_model_output(model_output: str) -> Optional[Dict[str, Any]]:
     if not isinstance(model_output, str):
         print(f"Ожидается строка, получен: {type(model_output)}")
@@ -115,6 +123,7 @@ def extract_json_from_model_output(model_output: str) -> Optional[Dict[str, Any]
         print(f"Содержимое для парсинга: {repr(json_content[:200])}...")
         return None
 
+
 def extract_ordered_pages_from_json(parsed_json: Dict[str, Any]) -> List[int]:
     if not isinstance(parsed_json, dict):
         print(f"Ожидается словарь, получен: {type(parsed_json)}")
@@ -135,6 +144,7 @@ def extract_ordered_pages_from_json(parsed_json: Dict[str, Any]) -> List[int]:
 
     return []
 
+
 def parse_model_output_fallback(model_output: str) -> List[int]:
     array_match = re.search(r"\[[\d\s,]+\]", model_output)
     if array_match:
@@ -151,6 +161,7 @@ def parse_model_output_fallback(model_output: str) -> List[int]:
             pass
 
     return []
+
 
 def process_model_response(model_response: str) -> List[int]:
     if not isinstance(model_response, str):
@@ -173,6 +184,7 @@ def process_model_response(model_response: str) -> List[int]:
     print(f"Сырой ответ: {repr(model_response[:300])}...")
     return []
 
+
 def get_prediction(model: Any, image_paths: List[Path], prompt: str) -> List[int]:
     try:
         image_paths_str = [str(path) for path in image_paths]
@@ -184,33 +196,6 @@ def get_prediction(model: Any, image_paths: List[Path], prompt: str) -> List[int
         print(f"Ошибка при предсказании для документа: {e}")
         return []
 
-def evaluate_ordering(
-    true_order: List[int], predicted_order: List[int]
-) -> Dict[str, float]:
-    if not true_order or not predicted_order or len(true_order) != len(predicted_order):
-        return {"kendall_tau": 0.0, "accuracy": 0.0, "spearman_rho": 0.0}
-
-    if set(true_order) != set(predicted_order):
-        print(f"Предупреждение: наборы страниц не совпадают")
-        print(f"Правильный: {true_order}")
-        print(f"Предсказанный: {predicted_order}")
-        return {"kendall_tau": 0.0, "accuracy": 0.0, "spearman_rho": 0.0}
-
-    true_positions = {page: i for i, page in enumerate(true_order)}
-    true_ranks = [true_positions[page] for page in predicted_order]
-    pred_ranks = list(range(len(predicted_order)))
-
-    kendall, _ = kendalltau(pred_ranks, true_ranks)
-    accuracy = sum(t == p for t, p in zip(true_order, predicted_order)) / len(
-        true_order
-    )
-    rho, _ = spearmanr(true_order, predicted_order)
-
-    return {
-        "kendall_tau": round(kendall, 4),
-        "accuracy": round(accuracy, 4),
-        "spearman_rho": round(rho, 4),
-    }
 
 def save_prediction(output_dir: Path, document_id: str, prediction: List[int]) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -219,6 +204,7 @@ def save_prediction(output_dir: Path, document_id: str, prediction: List[int]) -
     result = {"ordered_pages": prediction}
     with output_file.open("w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
+
 
 def calculate_and_save_metrics(
     all_metrics: Dict[str, List[float]], subset_name: str, run_id: str
@@ -240,6 +226,7 @@ def calculate_and_save_metrics(
     results_df.to_csv(f"{run_id}_{subset_name}_page_sorting_results.csv", index=False)
 
     return mean_metrics
+
 
 def run_evaluation(config: Dict[str, Any]) -> None:
     task_config = config["task"]
@@ -310,7 +297,7 @@ def run_evaluation(config: Dict[str, Any]) -> None:
 
             save_prediction(output_dir, doc_id, predicted_order)
 
-            metrics = evaluate_ordering(true_order, predicted_order)
+            metrics = calculate_ordering_metrics(true_order, predicted_order)
             for key, value in metrics.items():
                 all_metrics[key].append(value)
 
@@ -331,6 +318,7 @@ def run_evaluation(config: Dict[str, Any]) -> None:
 
         final_df.to_csv(f"{run_id}_final_page_sorting_results.csv", index=False)
 
+
 def main() -> None:
     """Главная функция для запуска процесса упорядочивания страниц.
 
@@ -341,6 +329,7 @@ def main() -> None:
         run_evaluation(config)
     except (FileNotFoundError, KeyError) as e:
         print(f"Ошибка: {e}")
+
 
 if __name__ == "__main__":
     main()
