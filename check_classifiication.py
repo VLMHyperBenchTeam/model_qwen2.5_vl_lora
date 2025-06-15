@@ -1,72 +1,12 @@
-import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from model_interface.model_factory import ModelFactory
-from sklearn.metrics import (
-    accuracy_score,
-    classification_report,
-    f1_score,
-    precision_score,
-    recall_score,
-)
 from tqdm import tqdm
 
-
-def load_config(config_path: str = "config_classification.json") -> Dict[str, Any]:
-    """Загружает конфигурацию из JSON файла.
-
-    Args:
-        config_path (str): Путь к файлу конфигурации JSON.
-
-    Returns:
-        Dict[str, Any]: Словарь с параметрами конфигурации.
-
-    Raises:
-        FileNotFoundError: Если файл конфигурации не найден по указанному пути.
-    """
-    config_file = Path(config_path)
-    if not config_file.exists():
-        raise FileNotFoundError(f"Файл конфигурации {config_path} не найден")
-    with config_file.open("r") as f:
-        return json.load(f)
-
-
-def initialize_model(config: Dict[str, Any]) -> Any:
-    """Инициализирует и возвращает модель согласно конфигурации.
-
-    Args:
-        config (Dict[str, Any]): Словарь конфигурации, содержащий секции
-            'model' с параметрами для инициализации модели.
-
-    Returns:
-        Any: Инициализированный объект модели.
-    """
-    model_config = config["model"]
-
-    model_family = model_config["model_family"]
-    cache_dir = Path(model_config["cache_dir"])
-    cache_dir.mkdir(exist_ok=True)
-
-    # Формируем путь к классу модели из конфигурации
-    package = model_config["package"]
-    module = model_config["module"]
-    model_class = model_config["model_class"]
-    model_class_path = f"{package}.{module}:{model_class}"
-
-    # Регистрация модели в фабрике
-    ModelFactory.register_model(model_family, model_class_path)
-
-    model_params = {
-        "model_name": model_config["model_name"],
-        "system_prompt": model_config.get("system_prompt", ""),
-        "cache_dir": model_config["cache_dir"],
-        "device_map": model_config["device_map"],
-    }
-    print(f"Инициализация модели: {model_config['model_name']}")
-    return ModelFactory.get_model(model_family, model_params)
-
+from utils import load_config, get_run_id, save_results_to_csv
+from model_utils import initialize_model, load_prompt
+from metrics import calculate_classification_metrics
 
 def get_image_paths(
     dataset_path: Path,
@@ -110,7 +50,6 @@ def get_image_paths(
     print(f"Найдено файлов для обработки: {len(selected_files)}")
     return selected_files
 
-
 def get_prediction(
     model: Any, image_path: Path, prompt: str, document_classes: Dict[str, str]
 ) -> str:
@@ -144,7 +83,6 @@ def get_prediction(
         print(f"Ошибка при классификации файла {image_path.name}: {e}")
         return "None"
 
-
 def calculate_and_save_metrics(
     y_true: List[str],
     y_pred: List[str],
@@ -168,36 +106,26 @@ def calculate_and_save_metrics(
         Dict[str, float]: Словарь с вычисленными средневзвешенными метриками
                           или пустой словарь, если данных для расчета нет.
     """
-    if not y_true:
-        print("Нет данных для оценки метрик.")
-        return {}
+    """Вычисляет и сохраняет метрики, возвращает словарь с основными метриками.
 
-    all_classes = list(document_classes.keys())
-    if "None" in set(y_pred):
-        all_classes.append("None")
+    Args:
+        y_true (List[str]): Список истинных меток классов.
+        y_pred (List[str]): Список предсказанных меток классов.
+        subset_name (str): Имя обрабатываемого подмножества.
+        run_id (str): Уникальный идентификатор запуска для именования файлов.
+        document_classes (Dict[str, str]): Словарь классов документов.
 
-    print(f"\n📊 Отчет по классификации для сабсета {subset_name}:")
-    report = classification_report(
-        y_true, y_pred, labels=all_classes, output_dict=True, zero_division=0
-    )
-    report_df = pd.DataFrame(report).transpose()
-    report_df.to_csv(f"{run_id}_{subset_name}_per_class_metrics.csv")
-    print(report_df)
-
-    metrics = {
-        "accuracy": accuracy_score(y_true, y_pred),
-        "f1": f1_score(y_true, y_pred, average="weighted", zero_division=0),
-        "precision": precision_score(
-            y_true, y_pred, average="weighted", zero_division=0
-        ),
-        "recall": recall_score(y_true, y_pred, average="weighted", zero_division=0),
-    }
-
-    results_df = pd.DataFrame([metrics])
-    results_df.to_csv(f"{run_id}_{subset_name}_classification_results.csv", index=False)
-
+    Returns:
+        Dict[str, float]: Словарь с вычисленными метриками или пустой словарь.
+    """
+    metrics = calculate_classification_metrics(y_true, y_pred, document_classes)
+    if metrics:
+        save_results_to_csv(
+            metrics, 
+            f"{run_id}_{subset_name}_classification_results.csv", 
+            subset_name
+        )
     return metrics
-
 
 def run_evaluation(config: Dict[str, Any]) -> None:
     """Основной цикл оценки модели.
@@ -220,13 +148,13 @@ def run_evaluation(config: Dict[str, Any]) -> None:
 
     model = initialize_model(config)
 
-    prompt_template = prompt_path.read_text(encoding="utf-8")
+    prompt_template = load_prompt(prompt_path)
     classes_str = ", ".join(
         f"{idx}: {name}" for idx, name in enumerate(document_classes.values())
     )
     prompt = prompt_template.format(classes=classes_str)
 
-    run_id = Path(model_config["model_name"]).stem
+    run_id = get_run_id(model_config["model_name"])
     all_metrics = []
 
     for subset in task_config["subsets"]:
@@ -238,9 +166,6 @@ def run_evaluation(config: Dict[str, Any]) -> None:
             continue
 
         y_true, y_pred = [], []
-        # Использование `path.parts` делает код более надежным и независимым от ОС.
-        # Структура пути: ./dataset/{class_name}/images/{subset_name}/...
-        # Поэтому `class_name` это 4-й элемент с конца (индекс -4).
         for path in tqdm(image_paths, desc=f"Обработка {subset}"):
             y_true.append(path.parts[-4])
             y_pred.append(get_prediction(model, path, prompt, document_classes))
@@ -262,18 +187,16 @@ def run_evaluation(config: Dict[str, Any]) -> None:
 
         final_df.to_csv(f"{run_id}_final_classification_results.csv", index=False)
 
-
 def main() -> None:
     """Главная функция для запуска процесса классификации.
 
     Загружает конфигурацию и запускает основной цикл оценки.
     """
     try:
-        config = load_config()
+        config = load_config("config_classification.json")
         run_evaluation(config)
     except (FileNotFoundError, KeyError) as e:
         print(f"Ошибка: {e}")
-
 
 if __name__ == "__main__":
     main()
