@@ -103,7 +103,7 @@ def get_image_paths(
                 selected_files.append(path)
             else:
                 selected_files.extend(p for p in path.iterdir() if p.is_file())
-    
+
     print(f"Найдено файлов для обработки: {len(selected_files)}")
     return selected_files
 
@@ -124,14 +124,14 @@ def get_prediction(model: Any, image_path: Path, prompt: str) -> str:
         # Передаем путь к изображению напрямую в модель
         result = model.predict_on_image(image=str(image_path), question=prompt)
         prediction = result.strip().strip('"')
-        
+
         if prediction.isdigit():
             class_index = int(prediction)
             if 0 <= class_index < len(document_classes):
                 pred_class_name = list(document_classes.values())[class_index]
                 return CLASS_NAMES_TO_KEYS.get(pred_class_name, "None")
         return "None"
-        
+
     except Exception as e:
         print(f"Ошибка при классификации файла {image_path.name}: {e}")
         return "None"
@@ -174,13 +174,15 @@ def calculate_and_save_metrics(
     metrics = {
         "accuracy": accuracy_score(y_true, y_pred),
         "f1": f1_score(y_true, y_pred, average="weighted", zero_division=0),
-        "precision": precision_score(y_true, y_pred, average="weighted", zero_division=0),
+        "precision": precision_score(
+            y_true, y_pred, average="weighted", zero_division=0
+        ),
         "recall": recall_score(y_true, y_pred, average="weighted", zero_division=0),
     }
 
     results_df = pd.DataFrame([metrics])
     results_df.to_csv(f"{run_id}_{subset_name}_classification_results.csv", index=False)
-    
+
     return metrics
 
 
@@ -199,17 +201,21 @@ def run_evaluation(config: Dict[str, Any]) -> None:
     sample_size = config.get("sample_size")
 
     model = initialize_model(config)
-    
+
     prompt_template = prompt_path.read_text(encoding="utf-8")
-    classes_str = ", ".join(f"{idx}: {name}" for idx, name in enumerate(document_classes.values()))
+    classes_str = ", ".join(
+        f"{idx}: {name}" for idx, name in enumerate(document_classes.values())
+    )
     prompt = prompt_template.format(classes=classes_str)
 
     run_id = Path(config["model_name"]).stem
     all_metrics = []
 
     for subset in config["subsets"]:
-        image_paths = get_image_paths(dataset_path, list(document_classes.keys()), subset, sample_size)
-        
+        image_paths = get_image_paths(
+            dataset_path, list(document_classes.keys()), subset, sample_size
+        )
+
         if not image_paths:
             continue
 
@@ -233,7 +239,7 @@ def run_evaluation(config: Dict[str, Any]) -> None:
         print(f"  Средний F1-score: {avg_metrics['f1']:.4f}")
         print(f"  Средняя точность (Precision): {avg_metrics['precision']:.4f}")
         print(f"  Средний отзыв (Recall): {avg_metrics['recall']:.4f}")
-        
+
         final_df.to_csv(f"{run_id}_final_classification_results.csv", index=False)
 
 
