@@ -10,3 +10,6 @@ dataset_for_training.zip
 
 # ignore prompts
 prompts
+
+# ignore output
+output
