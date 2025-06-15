@@ -3,5 +3,6 @@ document_classes = {
     "tin_new": "ИНН_нового образца",
     "tin_old": "ИНН старого образца",
     "passport": "Паспорт",
-    "snils": "СНИЛС"
+    "snils": "СНИЛС",
+    "interest_free_loan_agreement": "Договор беспроцентного займа",
 }
