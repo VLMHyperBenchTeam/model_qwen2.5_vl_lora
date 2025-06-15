@@ -1,6 +1,4 @@
-import base64
 import json
-import mimetypes
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -18,25 +16,7 @@ from tqdm import tqdm
 from document_classes import document_classes
 
 # Создаем обратное отображение для быстрого поиска ключа класса.
-# Это эффективнее, чем использовать next() в цикле.
 CLASS_NAMES_TO_KEYS = {v: k for k, v in document_classes.items()}
-
-
-def get_image_as_base64(image_path: Path) -> str:
-    """Конвертирует изображение в base64 строку с MIME типом.
-
-    Args:
-        image_path (Path): Путь к файлу изображения.
-
-    Returns:
-        str: Строка данных в формате Data URI (например, 'data:image/jpeg;base64,...').
-    """
-    mime_type, _ = mimetypes.guess_type(image_path)
-    if not mime_type:
-        mime_type = "image/jpeg"  # Установка MIME по умолчанию
-    with image_path.open("rb") as image_file:
-        encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
-    return f"data:{mime_type};base64,{encoded_string}"
 
 
 def load_config(config_path: str = "config_classification.json") -> Dict[str, Any]:
@@ -141,8 +121,8 @@ def get_prediction(model: Any, image_path: Path, prompt: str) -> str:
              в случае ошибки или некорректного ответа модели.
     """
     try:
-        base64_image = get_image_as_base64(image_path)
-        result = model.predict_on_image(image=base64_image, question=prompt)
+        # Передаем путь к изображению напрямую в модель
+        result = model.predict_on_image(image=str(image_path), question=prompt)
         prediction = result.strip().strip('"')
         
         if prediction.isdigit():
