@@ -1,9 +1,10 @@
 {
     "task": {
-        "dataset_path": "./dataset",
-        "prompt_path": "./prompts/classification.txt",
+        "dataset_path": "./dataset/interest_free_loan_agreement",
+        "prompt_path": "./prompts/page_sorting.txt",
         "subsets": ["clean"],
-        "sample_size": 3
+        "sample_size": null,
+        "output_dir": "./output"
     },
     "model": {
         "model_name": "Qwen2.5-VL-3B-Instruct",
@@ -16,11 +17,6 @@
         "system_prompt": ""
     },
     "document_classes": {
-        "invoice": "Счет-фактура",
-        "tin_new": "ИНН_нового образца",
-        "tin_old": "ИНН старого образца",
-        "passport": "Паспорт",
-        "snils": "СНИЛС",
         "interest_free_loan_agreement": "Договор беспроцентного займа"
     }
 }
