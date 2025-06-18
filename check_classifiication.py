@@ -132,7 +132,7 @@ def run_evaluation(config: Dict[str, Any]) -> None:
     prompt_path = Path(task_config["prompt_path"])
     sample_size = task_config.get("sample_size")
 
-    model = initialize_model(config)
+    model = initialize_model(model_config)
 
     prompt_template = load_prompt(prompt_path)
     classes_str = ", ".join(

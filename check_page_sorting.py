@@ -237,7 +237,7 @@ def run_evaluation(config: Dict[str, Any]) -> None:
     sample_size = task_config.get("sample_size")
     output_base_dir = Path(task_config["output_dir"])
 
-    model = initialize_model(config)
+    model = initialize_model(model_config)
 
     prompt = load_prompt(prompt_path)
     run_id = get_run_id(model_config["model_name"])
