@@ -319,12 +319,12 @@ wheels = [
 
 [[package]]
 name = "model-interface"
-version = "0.1.2.dev1"
+version = "0.1.2.dev2"
 source = { editable = "packages/model_interface" }
 
 [[package]]
 name = "model-qwen2-5-vl"
-version = "0.1.2.dev2"
+version = "0.1.2.dev3"
 source = { editable = "packages/model_qwen2.5-vl" }
 dependencies = [
     { name = "accelerate" },
@@ -1303,7 +1303,7 @@ wheels = [
 
 [[package]]
 name = "vlm-hyperbench"
-version = "0.0.1"
+version = "0.0.2"
 source = { editable = "." }
 dependencies = [
     { name = "bench-utils" },

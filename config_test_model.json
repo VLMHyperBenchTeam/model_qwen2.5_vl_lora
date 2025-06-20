@@ -3,13 +3,6 @@
         "image_path": "dataset/passport/images/clean/0.jpg",
         "prompt": "Опиши документ.",
         "show_gpu_info": true,
-        "sample_prompts": [
-            "Опиши документ.",
-            "Какой тип документа изображен?",
-            "Извлеки всю текстовую информацию из документа.",
-            "Назови основные поля документа.",
-            "Есть ли на документе фотография человека?"
-        ],
         "sample_images": [
             "dataset/passport/images/clean/0.jpg"
         ]
