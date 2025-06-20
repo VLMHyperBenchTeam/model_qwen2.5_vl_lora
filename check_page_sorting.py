@@ -7,7 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from bench_utils.metrics import calculate_ordering_metrics
-from model_interface.model_factory import ModelFactory, load_prompt
+from bench_utils.model_utils import initialize_model, load_prompt, prepare_prompt
 from bench_utils.utils import (
     get_document_type_from_config,
     get_run_id,
@@ -237,9 +237,10 @@ def run_evaluation(config: Dict[str, Any]) -> None:
     sample_size = task_config.get("sample_size")
     output_base_dir = Path(task_config["output_dir"])
 
-    model = ModelFactory.initialize_model(model_config)
+    model = initialize_model(model_config)
 
-    prompt = load_prompt(prompt_path)
+    template = load_prompt(prompt_path)
+    prompt = prepare_prompt(template)
     run_id = get_run_id(model_config["model_name"])
 
     document_type_name = get_document_type_from_config(config, dataset_path)

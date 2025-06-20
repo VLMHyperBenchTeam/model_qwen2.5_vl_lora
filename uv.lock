@@ -13,6 +13,7 @@ members = [
     "model-interface",
     "model-qwen2-5-vl",
     "print-utils",
+    "prompt-handler",
     "vlm-hyperbench",
 ]
 
@@ -86,6 +87,7 @@ source = { editable = "packages/bench_utils" }
 dependencies = [
     { name = "model-interface" },
     { name = "pandas" },
+    { name = "prompt-handler" },
     { name = "scikit-learn" },
     { name = "scipy" },
 ]
@@ -94,6 +96,7 @@ dependencies = [
 requires-dist = [
     { name = "model-interface", editable = "packages/model_interface" },
     { name = "pandas", specifier = ">=2.3.0" },
+    { name = "prompt-handler", editable = "packages/prompt_handler" },
     { name = "scikit-learn", specifier = ">=1.7.0" },
     { name = "scipy", specifier = ">=1.15.3" },
 ]
@@ -780,6 +783,11 @@ version = "0.0.1.dev0"
 source = { editable = "packages/print_utils" }
 
 [[package]]
+name = "prompt-handler"
+version = "0.0.1.dev0"
+source = { editable = "packages/prompt_handler" }
+
+[[package]]
 name = "psutil"
 version = "7.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1310,6 +1318,7 @@ dependencies = [
     { name = "model-interface" },
     { name = "model-qwen2-5-vl" },
     { name = "print-utils" },
+    { name = "prompt-handler" },
 ]
 
 [package.metadata]
@@ -1318,4 +1327,5 @@ requires-dist = [
     { name = "model-interface", editable = "packages/model_interface" },
     { name = "model-qwen2-5-vl", editable = "packages/model_qwen2.5-vl" },
     { name = "print-utils", editable = "packages/print_utils" },
+    { name = "prompt-handler", editable = "packages/prompt_handler" },
 ]

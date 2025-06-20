@@ -1,11 +1,12 @@
 [project]
 name = "vlm-hyperbench"
-version = "0.0.2"
+version = "0.0.3"
 requires-python = ">=3.10"
 dependencies = [
     "bench-utils",
     "model-interface",
     "model-qwen2-5-vl",
+    "prompt-handler",
     "print-utils",
 ]
 
@@ -13,6 +14,7 @@ dependencies = [
 bench-utils = { workspace = true }
 model-interface = { workspace = true }
 model-qwen2-5-vl = { workspace = true }
+prompt-handler = { workspace = true }
 print-utils = { workspace = true }
 
 [tool.uv.workspace]
