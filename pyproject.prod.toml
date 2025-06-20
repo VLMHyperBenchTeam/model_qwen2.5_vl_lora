@@ -1,0 +1,7 @@
+# Prod configuration: использовать теги GitHub вместо локального workspace
+# Обновите значения tag при выпуске новой версии.
+
+[tool.uv.sources]
+bench-utils = { git = "https://github.com/VLMHyperBenchTeam/vlm-hyperbench.git", tag = "bench-utils-v0.1.2", subdirectory = "packages/bench_utils" }
+model-interface = { git = "https://github.com/VLMHyperBenchTeam/vlm-hyperbench.git", tag = "model-interface-v0.1.2", subdirectory = "packages/model_interface" }
+model-qwen2-5-vl = { git = "https://github.com/VLMHyperBenchTeam/vlm-hyperbench.git", tag = "model-qwen2-5-vl-v0.1.2", subdirectory = "packages/model_qwen2.5-vl" } 

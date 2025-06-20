@@ -5,7 +5,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from bench_utils.metrics import calculate_classification_metrics
-from bench_utils.model_utils import initialize_model, load_prompt
+from model_interface.model_factory import ModelFactory, load_prompt
 from bench_utils.utils import get_run_id, load_config, save_results_to_csv
 
 
@@ -132,7 +132,7 @@ def run_evaluation(config: Dict[str, Any]) -> None:
     prompt_path = Path(task_config["prompt_path"])
     sample_size = task_config.get("sample_size")
 
-    model = initialize_model(model_config)
+    model = ModelFactory.initialize_model(model_config)
 
     prompt_template = load_prompt(prompt_path)
     classes_str = ", ".join(

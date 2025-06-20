@@ -1,0 +1,16 @@
+name: Tag record
+
+on:
+  push:
+    tags:
+      - 'bench-utils-v*'
+      - 'model-interface-v*'
+      - 'model-qwen2-5-vl-v*'
+
+jobs:
+  on-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log tag info
+        run: echo "Tag $GITHUB_REF_NAME pushed – no build performed." 
