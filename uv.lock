@@ -82,7 +82,7 @@ wheels = [
 
 [[package]]
 name = "bench-utils"
-version = "0.1.2.dev2"
+version = "0.1.2.dev3"
 source = { editable = "packages/bench_utils" }
 dependencies = [
     { name = "model-interface" },
@@ -322,7 +322,7 @@ wheels = [
 
 [[package]]
 name = "model-interface"
-version = "0.1.2.dev2"
+version = "0.1.2.dev3"
 source = { editable = "packages/model_interface" }
 
 [[package]]
@@ -779,7 +779,7 @@ wheels = [
 
 [[package]]
 name = "print-utils"
-version = "0.0.1.dev0"
+version = "0.0.1.dev1"
 source = { editable = "packages/print_utils" }
 
 [[package]]
@@ -1311,7 +1311,7 @@ wheels = [
 
 [[package]]
 name = "vlm-hyperbench"
-version = "0.0.2"
+version = "0.0.3"
 source = { editable = "." }
 dependencies = [
     { name = "bench-utils" },

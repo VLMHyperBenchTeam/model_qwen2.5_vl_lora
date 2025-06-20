@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from tqdm import tqdm
+from sklearn.metrics import confusion_matrix  # type: ignore
 
 from bench_utils.metrics import calculate_classification_metrics
 from bench_utils.model_utils import initialize_model, load_prompt, prepare_prompt
@@ -113,6 +114,45 @@ def calculate_and_save_metrics(
     return metrics
 
 
+def calculate_and_save_confusion_matrix(
+    y_true: List[str],
+    y_pred: List[str],
+    subset_name: str,
+    run_id: str,
+    document_classes: Dict[str, str],
+) -> None:
+    """Вычисляет матрицу ошибок и сохраняет её в CSV файл.
+
+    Args:
+        y_true (List[str]): Список истинных меток классов.
+        y_pred (List[str]): Список предсказанных меток классов.
+        subset_name (str): Имя сабсета, для которого вычисляется матрица.
+        run_id (str): Идентификатор запуска, используется в имени выходного файла.
+        document_classes (Dict[str, str]): Словарь классов документов.
+    """
+
+    if not y_true:
+        print("Нет данных для построения confusion matrix.")
+        return
+
+    # Формируем полный список меток, включая возможный класс 'None'
+    labels = list(document_classes.keys())
+    if "None" in set(y_pred):
+        labels.append("None")
+
+    cm = confusion_matrix(y_true, y_pred, labels=labels)
+
+    # Преобразуем в DataFrame для удобства чтения и сохранения
+    cm_df = pd.DataFrame(cm, index=labels, columns=labels)
+
+    print(f"\n🧩 Confusion Matrix для сабсета {subset_name}:")
+    print(cm_df)
+
+    cm_filename = f"{run_id}_{subset_name}_confusion_matrix.csv"
+    cm_df.to_csv(cm_filename)
+    print(f"Матрица сохранена в {cm_filename}")
+
+
 def run_evaluation(config: Dict[str, Any]) -> None:
     """Основной цикл оценки модели.
 
@@ -157,6 +197,10 @@ def run_evaluation(config: Dict[str, Any]) -> None:
             y_pred.append(get_prediction(model, path, prompt, document_classes))
 
         subset_metrics = calculate_and_save_metrics(
+            y_true, y_pred, subset, run_id, document_classes
+        )
+        # --- Confusion matrix ---
+        calculate_and_save_confusion_matrix(
             y_true, y_pred, subset, run_id, document_classes
         )
         if subset_metrics:
