@@ -8,6 +8,13 @@ from sklearn.metrics import confusion_matrix  # type: ignore
 from bench_utils.metrics import calculate_classification_metrics
 from bench_utils.model_utils import initialize_model, load_prompt, prepare_prompt
 from bench_utils.utils import get_run_id, load_config, save_results_to_csv
+from print_utils import (  # type: ignore
+    print_section,
+    print_info,
+    print_success,
+    print_error,
+    print_header,
+)
 
 
 def get_image_paths(
@@ -33,7 +40,7 @@ def get_image_paths(
         List[Path]: Список объектов Path, ведущих к выбранным изображениям.
     """
     selected_files = []
-    print(f"\n📂 Обработка сабсета: {subset_name}")
+    print_section(f"Обработка сабсета: {subset_name}")
     for class_name in class_names:
         class_dir = dataset_path / class_name / "images" / subset_name
         if not class_dir.exists():
@@ -49,7 +56,7 @@ def get_image_paths(
             else:
                 selected_files.extend(p for p in path.iterdir() if p.is_file())
 
-    print(f"Найдено файлов для обработки: {len(selected_files)}")
+    print_info(f"Найдено файлов: {len(selected_files)}")
     return selected_files
 
 
@@ -83,7 +90,7 @@ def get_prediction(
         return "None"
 
     except Exception as e:
-        print(f"Ошибка при классификации файла {image_path.name}: {e}")
+        print_error(f"Ошибка при классификации файла {image_path.name}: {e}")
         return "None"
 
 
@@ -145,12 +152,12 @@ def calculate_and_save_confusion_matrix(
     # Преобразуем в DataFrame для удобства чтения и сохранения
     cm_df = pd.DataFrame(cm, index=labels, columns=labels)
 
-    print(f"\n🧩 Confusion Matrix для сабсета {subset_name}:")
+    print_section(f"Confusion Matrix для сабсета {subset_name}")
     print(cm_df)
 
     cm_filename = f"{run_id}_{subset_name}_confusion_matrix.csv"
     cm_df.to_csv(cm_filename)
-    print(f"Матрица сохранена в {cm_filename}")
+    print_success(f"Матрица сохранена в {cm_filename}")
 
 
 def run_evaluation(config: Dict[str, Any]) -> None:
@@ -164,9 +171,19 @@ def run_evaluation(config: Dict[str, Any]) -> None:
         config (Dict[str, Any]): Словарь с полной конфигурацией для запуска,
                                 содержащий секции 'task', 'model' и 'document_classes'.
     """
+    # --- Вывод параметров перед стартом ---
+    print_header()
+    print_section("ПАРАМЕТРЫ ОЦЕНКИ")
+
     task_config = config["task"]
     model_config = config["model"]
     document_classes = config["document_classes"]
+
+    print_info(f"Датасет: {task_config['dataset_path']}")
+    print_info(f"Subsets: {', '.join(task_config['subsets'])}")
+    if task_config.get("sample_size"):
+        print_info(f"Sample size: {task_config['sample_size']}")
+    print_info(f"Модель: {model_config['model_name']}")
 
     dataset_path = Path(task_config["dataset_path"])
     prompt_path = Path(task_config["prompt_path"])
@@ -209,13 +226,15 @@ def run_evaluation(config: Dict[str, Any]) -> None:
     if all_metrics:
         final_df = pd.DataFrame(all_metrics)
         avg_metrics = final_df.mean()
-        print("\n📊 Средние метрики по всем сабсетам:")
-        print(f"  Средняя точность (Accuracy): {avg_metrics['accuracy']:.4f}")
-        print(f"  Средний F1-score: {avg_metrics['f1']:.4f}")
-        print(f"  Средняя точность (Precision): {avg_metrics['precision']:.4f}")
-        print(f"  Средний отзыв (Recall): {avg_metrics['recall']:.4f}")
+        print_section("Средние метрики по всем сабсетам")
+        print_info(f"Средняя точность (Accuracy): {avg_metrics['accuracy']:.4f}")
+        print_info(f"Средний F1-score: {avg_metrics['f1']:.4f}")
+        print_info(f"Средняя точность (Precision): {avg_metrics['precision']:.4f}")
+        print_info(f"Средний отзыв (Recall): {avg_metrics['recall']:.4f}")
 
-        final_df.to_csv(f"{run_id}_final_classification_results.csv", index=False)
+        out_file = f"{run_id}_final_classification_results.csv"
+        final_df.to_csv(out_file, index=False)
+        print_success(f"Итоговые метрики сохранены в {out_file}")
 
 
 def main() -> None:
@@ -227,7 +246,7 @@ def main() -> None:
         config = load_config("config_classification.json")
         run_evaluation(config)
     except (FileNotFoundError, KeyError) as e:
-        print(f"Ошибка: {e}")
+        print_error(f"Ошибка: {e}")
 
 
 if __name__ == "__main__":
