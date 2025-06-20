@@ -69,7 +69,7 @@ def get_prediction(
     """
     try:
         # Передаем путь к изображению напрямую в модель
-        result = model.predict_on_image(image=str(image_path), question=prompt)
+        result = model.predict_on_image(image=str(image_path), prompt=prompt)
         prediction = result.strip().strip('"')
 
         if prediction.isdigit():

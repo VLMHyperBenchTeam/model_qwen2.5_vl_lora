@@ -1,17 +1,19 @@
 [project]
 name = "vlm-hyperbench"
-version = "0.0.1"
+version = "0.0.2"
 requires-python = ">=3.10"
 dependencies = [
     "bench-utils",
     "model-interface",
     "model-qwen2-5-vl",
+    "print-utils",
 ]
 
 [tool.uv.sources]
 bench-utils = { workspace = true }
 model-interface = { workspace = true }
 model-qwen2-5-vl = { workspace = true }
+print-utils = { workspace = true }
 
 [tool.uv.workspace]
 # все пакеты, лежащие в каталогах packages/* (каждый должен содержать собственный pyproject.toml)

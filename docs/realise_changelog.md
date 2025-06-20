@@ -1,89 +1,91 @@
-# Changelog для релиза
+# Changelog релиза
 
-## Дата релиза: $(date)
+## Дата: $(date)
 
-### Изменения в пакетах:
+## Изменения в пакетах:
 
-#### bench_utils
-- [x] Анализ изменений - добавлена зависимость model-interface
-- [x] Обновление версии - 0.1.2.dev1 -> 0.1.2.dev2
-- [x] Создание коммита - chore: обновление зависимостей
-- [x] Создание тега - v0.1.2.dev2
-
-**Commit message:**
-```
-chore: bump version to 0.1.2.dev2 and add model-interface dependency
-
-- Update version from 0.1.2.dev1 to 0.1.2.dev2
-- Add model-interface as dependency
-- Add workspace configuration for model-interface
-- Add hatch metadata configuration for direct references
-```
-
-#### model_interface  
-- [x] Анализ изменений - нет изменений, пропущен
+### bench_utils
+- Статус: 🔄 Пропущен
+- [x] Анализ изменений - нет изменений в коде
 - [-] Обновление версии - не требуется
 - [-] Создание коммита - не требуется
 - [-] Создание тега - не требуется
 
-#### model_qwen2.5-vl
-- [x] Анализ изменений - добавлен flash_attn fallback
+### model_interface  
+- Статус: ✅ Завершен
+- [x] Анализ изменений - рефакторинг API параметров
 - [x] Обновление версии - 0.1.2.dev1 -> 0.1.2.dev2
-- [x] Создание коммита - feat: новая функциональность
+- [x] Создание коммита - refactor: improve API parameters naming
 - [x] Создание тега - v0.1.2.dev2
 
-**Commit message:**
-```
-feat: add flash_attn fallback mechanism and update dependencies
+### model_qwen2.5-vl
+- Статус: ✅ Завершен
+- [x] Анализ изменений - рефакторинг API и документации
+- [x] Обновление версии - 0.1.2.dev2 -> 0.1.2.dev3
+- [x] Создание коммита - refactor: comprehensive API and documentation improvements
+- [x] Создание тега - v0.1.2.dev3
 
-- Add flash_attn availability check with fallback to eager attention
-- Improve model robustness when flash_attn is not available  
+### print_utils
+- Статус: 🔄 Пропущен
+- [x] Анализ изменений - нет изменений в коде
+- [-] Обновление версии - не требуется
+- [-] Создание коммита - не требуется
+- [-] Создание тега - не требуется
+
+## Изменения в основном проекте:
+- Статус: ✅ Завершен
+- [x] Анализ изменений - улучшения workspace структуры и тестирования
+- [x] Обновление версии - 0.0.1 -> 0.0.2
+- [x] Создание коммита - feat: improve workspace structure and testing capabilities
+- [x] Создание тега - v0.0.2
+
+## Итоги релиза:
+
+### Выполненные релизы:
+- **bench_utils**: без изменений (пропущен)
+- **model_interface**: v0.1.2.dev2 - рефакторинг API параметров ✅
+- **model_qwen2.5-vl**: v0.1.2.dev3 - рефакторинг API и документации ✅  
+- **print_utils**: без изменений (пропущен)
+- **основной проект**: v0.0.2 - улучшения workspace структуры ✅
+
+### Полные commit messages:
+
+#### model_interface (v0.1.2.dev2):
+```
+refactor: improve API parameters naming
+
+- Rename 'question' parameter to 'prompt' in predict_on_image and predict_on_images methods
+- Fix documentation typo in method descriptions
 - Update version to 0.1.2.dev2
-- Add torch, torchvision, transformers, accelerate dependencies
-- Update model-interface dependency to workspace reference
-- Update uv.lock with new dependency resolution
+
+BREAKING CHANGE: Parameter 'question' renamed to 'prompt' in ModelInterface methods
 ```
 
-### Изменения в основном проекте:
-- [x] Анализ изменений - обновлен test_model.py, добавлены файлы
-- [x] Обновление версии в pyproject.toml - 0.0.0 -> 0.0.1
-- [x] Создание коммита - feat: workspace structure и улучшения тестирования
-- [x] Создание тега - v0.0.1
-
-**Commit message:**
+#### model_qwen2.5-vl (v0.1.2.dev3):
 ```
-feat: add workspace structure and improve testing
+refactor: comprehensive API and documentation improvements
 
-- Add UV workspace configuration with packages structure
-- Add release process templates and changelog
-- Improve test_model.py with better error handling and configuration
-- Add test_config.py for centralized configuration
-- Update dependencies in uv.lock
-- Version bump to 0.0.1
+- Add comprehensive Google-style docstrings for all methods
+- Add type annotations throughout the codebase
+- Refactor architecture with new helper methods (_generate_answer, get_messages)
+- Improve library version compatibility handling
+- Update all run scripts to use new API
+- Update version to 0.1.2.dev3
+
+BREAKING CHANGE: Parameter 'question' renamed to 'prompt' in all predict methods
 ```
 
-## Статус выполнения:
-- [x] Подготовка
-- [x] Релиз пакетов
-- [x] Релиз основного проекта
-- [x] Завершение
+#### основной проект (v0.0.2):
+```
+feat: improve workspace structure and testing capabilities
 
-## 🎉 РЕЛИЗ ЗАВЕРШЕН УСПЕШНО! 
+- Add print-utils package to workspace dependencies
+- Enhance test_model.py with comprehensive testing improvements
+- Update check and structured output scripts
+- Add config_test_model.json configuration
+- Update documentation and release templates
+- Update version to 0.0.2
+```
 
-### Итоговый результат:
-- **bench_utils**: v0.1.2.dev2 - обновление зависимостей ✅ **PUSHED**
-- **model_interface**: без изменений (пропущен)
-- **model_qwen2.5-vl**: v0.1.2.dev2 - новая функциональность flash_attn fallback ✅ **PUSHED**
-- **основной проект**: v0.0.1 - workspace структура и улучшения ✅ **PUSHED**
-
-Все коммиты созданы согласно conventional commits стандарту.
-Все теги созданы с соответствующими версиями.
-Все изменения успешно запушены в соответствующие репозитории.
-
-### 🚀 Push статус:
-- **bench_utils**: коммиты и теги запушены в origin/refactoring ✅
-- **model_qwen2.5-vl**: коммиты и теги запушены в origin/refactoring ✅  
-- **основной проект**: коммиты и теги запушены в origin/uv_workspaces ✅
-
-## 🏆 ПРОЦЕСС РЕЛИЗА ПОЛНОСТЬЮ ЗАВЕРШЕН!
-Все пакеты и основной проект успешно обновлены, закоммичены, отегированы и запушены. 
+## Следующие шаги:
+Нужно выполнить push commit и push tag для каждого измененного пакета и проекта. 

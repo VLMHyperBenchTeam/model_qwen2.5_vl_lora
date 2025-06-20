@@ -81,7 +81,7 @@ if __name__ == "__main__":
     """
 
     # Выполнение запроса к модели
-    response = model.predict_on_image(image_path, prompt)
+    response = model.predict_on_image(image=image_path, prompt=prompt)
 
     # Извлечение и обработка данных
     raw_data = extract_json_from_response(response)

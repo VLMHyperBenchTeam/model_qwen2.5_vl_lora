@@ -189,7 +189,7 @@ def get_prediction(model: Any, image_paths: List[Path], prompt: str) -> List[int
     try:
         image_paths_str = [str(path) for path in image_paths]
         model_response = model.predict_on_images(
-            images=image_paths_str, question=prompt
+            images=image_paths_str, prompt=prompt
         )
         return process_model_response(model_response)
     except Exception as e:

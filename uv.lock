@@ -12,6 +12,7 @@ members = [
     "bench-utils",
     "model-interface",
     "model-qwen2-5-vl",
+    "print-utils",
     "vlm-hyperbench",
 ]
 
@@ -318,7 +319,7 @@ wheels = [
 
 [[package]]
 name = "model-interface"
-version = "0.1.2.dev2"
+version = "0.1.2.dev1"
 source = { editable = "packages/model_interface" }
 
 [[package]]
@@ -772,6 +773,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/58/0e/2abab98a72202d91146abc839e10c14f7cf36166f12838ea0c4db3ca6ecb/pillow-11.2.1-pp311-pypy311_pp73-manylinux_2_28_x86_64.whl", hash = "sha256:14f73f7c291279bd65fda51ee87affd7c1e097709f7fdd0188957a16c264601f", size = 3571586, upload-time = "2025-04-12T17:49:57.171Z" },
     { url = "https://files.pythonhosted.org/packages/21/2c/5e05f58658cf49b6667762cca03d6e7d85cededde2caf2ab37b81f80e574/pillow-11.2.1-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:208653868d5c9ecc2b327f9b9ef34e0e42a4cdd172c2988fd81d62d2bc9bc044", size = 2674751, upload-time = "2025-04-12T17:49:59.628Z" },
 ]
+
+[[package]]
+name = "print-utils"
+version = "0.0.1.dev0"
+source = { editable = "packages/print_utils" }
 
 [[package]]
 name = "psutil"
@@ -1303,6 +1309,7 @@ dependencies = [
     { name = "bench-utils" },
     { name = "model-interface" },
     { name = "model-qwen2-5-vl" },
+    { name = "print-utils" },
 ]
 
 [package.metadata]
@@ -1310,4 +1317,5 @@ requires-dist = [
     { name = "bench-utils", editable = "packages/bench_utils" },
     { name = "model-interface", editable = "packages/model_interface" },
     { name = "model-qwen2-5-vl", editable = "packages/model_qwen2.5-vl" },
+    { name = "print-utils", editable = "packages/print_utils" },
 ]
