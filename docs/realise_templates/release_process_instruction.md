@@ -38,7 +38,8 @@
 - Удалить временные файлы с commit messages
 
 ### 4. Завершение
-- Закрыть changelog файл
+- Дополним changelog с полными commit message для каждого пакета и проекта
+- Выполнить push commit и push tag для каждого измененного пакета и проекта
 
 ## Шаблон Conventional Commit 
 
