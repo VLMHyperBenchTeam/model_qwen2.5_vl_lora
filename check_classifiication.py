@@ -1,9 +1,10 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from datetime import datetime
 
 import pandas as pd
 from tqdm import tqdm
-from sklearn.metrics import confusion_matrix  # type: ignore
+from sklearn.metrics import confusion_matrix, classification_report  # type: ignore
 
 from bench_utils.metrics import calculate_classification_metrics
 from bench_utils.model_utils import initialize_model, load_prompt, prepare_prompt
@@ -147,10 +148,11 @@ def calculate_and_save_confusion_matrix(
     if "None" in set(y_pred):
         labels.append("None")
 
+    # Обычная (ненормализованная) матрица ошибок — абсолютные количества
     cm = confusion_matrix(y_true, y_pred, labels=labels)
 
-    # Преобразуем в DataFrame для удобства чтения и сохранения
-    cm_df = pd.DataFrame(cm, index=labels, columns=labels)
+    # Преобразуем в DataFrame и округляем значения для наглядности
+    cm_df = pd.DataFrame(cm, index=labels, columns=labels).round(4)
 
     print_section(f"Confusion Matrix для сабсета {subset_name}")
     print(cm_df)
@@ -158,6 +160,41 @@ def calculate_and_save_confusion_matrix(
     cm_filename = f"{run_id}_{subset_name}_confusion_matrix.csv"
     cm_df.to_csv(cm_filename)
     print_success(f"Матрица сохранена в {cm_filename}")
+
+
+def calculate_and_save_class_report(
+    y_true: List[str],
+    y_pred: List[str],
+    subset_name: str,
+    run_id: str,
+    document_classes: Dict[str, str],
+) -> None:
+    """Сохраняет подробный classification_report (precision/recall/F1 per class).
+
+    Args:
+        y_true: истинные метки.
+        y_pred: предсказанные метки.
+        subset_name: имя сабсета или 'overall'.
+        run_id: идентификатор запуска.
+        document_classes: словарь классов.
+    """
+
+    if not y_true:
+        return
+
+    all_classes = list(document_classes.keys())
+    if "None" in set(y_pred):
+        all_classes.append("None")
+
+    report = classification_report(
+        y_true, y_pred, labels=all_classes, output_dict=True, zero_division=0
+    )
+
+    report_df = pd.DataFrame(report).transpose().round(4)
+
+    out_path = f"{run_id}_{subset_name}_class_report.csv"
+    report_df.to_csv(out_path)
+    print_success(f"Отчёт по классам сохранён в {out_path}")
 
 
 def run_evaluation(config: Dict[str, Any]) -> None:
@@ -197,7 +234,11 @@ def run_evaluation(config: Dict[str, Any]) -> None:
     )
     prompt = prepare_prompt(template, classes=classes_str)
 
-    run_id = get_run_id(model_config["model_name"])
+    # Формируем уникальный run_id = <model>_<prompt>_<YYYYMMDD_HHMMSS>
+    model_name_clean = model_config["model_name"].replace(" ", "_")
+    prompt_name = prompt_path.stem
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_id = f"{model_name_clean}_{prompt_name}_{timestamp}"
     all_metrics = []
 
     for subset in task_config["subsets"]:
@@ -210,7 +251,14 @@ def run_evaluation(config: Dict[str, Any]) -> None:
 
         y_true, y_pred = [], []
         for path in tqdm(image_paths, desc=f"Обработка {subset}"):
-            y_true.append(path.parts[-4])
+            try:
+                # Имя класса всегда является первым сегментом после корневой директории датасета.
+                class_name = path.relative_to(dataset_path).parts[0]
+            except ValueError:
+                # На случай, если path не является прямым потомком dataset_path
+                class_name = path.parts[-5] if len(path.parts) >= 5 else "Unknown"
+
+            y_true.append(class_name)
             y_pred.append(get_prediction(model, path, prompt, document_classes))
 
         subset_metrics = calculate_and_save_metrics(
@@ -220,8 +268,18 @@ def run_evaluation(config: Dict[str, Any]) -> None:
         calculate_and_save_confusion_matrix(
             y_true, y_pred, subset, run_id, document_classes
         )
+        # --- Class-wise detailed metrics ---
+        calculate_and_save_class_report(
+            y_true, y_pred, subset, run_id, document_classes
+        )
         if subset_metrics:
             all_metrics.append(subset_metrics)
+
+    # --- Общий отчёт по классам на всём датасете ---
+    if y_true and y_pred:
+        calculate_and_save_class_report(
+            y_true, y_pred, "overall", run_id, document_classes
+        )
 
     if all_metrics:
         final_df = pd.DataFrame(all_metrics)
