@@ -20,24 +20,28 @@ members = [
 
 [[package]]
 name = "bench-utils"
-version = "0.1.2.dev4"
+version = "0.1.2.dev3"
 source = { editable = "packages/bench_utils" }
 dependencies = [
+    { name = "model-interface" },
     { name = "pandas" },
+    { name = "prompt-handler" },
     { name = "scikit-learn" },
     { name = "scipy" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "model-interface", editable = "packages/model_interface" },
     { name = "pandas", specifier = ">=2.3.0" },
+    { name = "prompt-handler", editable = "packages/prompt_handler" },
     { name = "scikit-learn", specifier = ">=1.7.0" },
     { name = "scipy", specifier = ">=1.15.3" },
 ]
 
 [[package]]
 name = "hello-world"
-version = "0.0.10.dev0"
+version = "0.0.10"
 source = { editable = "packages/hello_world" }
 
 [[package]]
