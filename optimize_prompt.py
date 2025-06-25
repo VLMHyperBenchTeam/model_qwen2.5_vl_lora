@@ -1,19 +1,21 @@
 import json
-import re
 import random
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from tqdm import tqdm
 import torch  # type: ignore  # нужен для обработки OutOfMemoryError
+from bench_utils.metrics import calculate_classification_metrics  # type: ignore
 
 # --- Внутренние пакеты проекта ---
 from bench_utils.model_utils import initialize_model, load_prompt, prepare_prompt  # type: ignore
-from bench_utils.metrics import calculate_classification_metrics  # type: ignore
+from tqdm import tqdm
 
 # Переиспользуем вспомогательные функции из скрипта классификации
 from check_classifiication import (
     get_image_paths as _collect_image_paths,
+)
+from check_classifiication import (
     get_prediction as _predict_single,
 )
 
@@ -252,4 +254,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main() 
+    main()

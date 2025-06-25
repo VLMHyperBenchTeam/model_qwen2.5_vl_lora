@@ -1,6 +1,5 @@
 import asyncio
 import base64
-import datetime
 import json
 import os
 import uuid
@@ -16,7 +15,6 @@ import seaborn as sns
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from pydantic import BaseModel, create_model
-from rapidfuzz import fuzz
 from sklearn.metrics import f1_score, precision_score, recall_score
 from tqdm.asyncio import tqdm
 
@@ -282,10 +280,10 @@ async def check_entity_extractor(dataset_path, prompt_path, model_name, subsets)
         image_files = sorted(list(subset.glob("*.jpg")))
         semaphore = asyncio.Semaphore(3)
 
-        async def sem_task(i):
-            async with semaphore:
+        async def sem_task(i, *, _semaphore=semaphore, _image_files=image_files, _pred_dir=pred_dir):
+            async with _semaphore:
                 try:
-                    image = image_files[i]
+                    image = _image_files[i]
                     image_id = image.stem
                     base64_image = image_to_base64(image)
                     json_data = read_json_file(
@@ -301,7 +299,7 @@ async def check_entity_extractor(dataset_path, prompt_path, model_name, subsets)
                     )
 
                     with open(
-                        pred_dir / f"{image_id}.json", "w", encoding="utf-8"
+                        _pred_dir / f"{image_id}.json", "w", encoding="utf-8"
                     ) as f:
                         json.dump(gt, f, ensure_ascii=False, indent=4)
                 except Exception as err:

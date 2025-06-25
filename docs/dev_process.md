@@ -4,11 +4,11 @@
 
 Настроил два режима:
 
-1. Разработка (текущий `pyproject.toml`)  
+1. Разработка (текущий `pyproject.toml`)
    • `workspace = true` → пакеты ставятся editable из каталога `packages/*`.
 
-2. Прод-режим — новый файл `pyproject.prod.toml`  
-   • В нём только блок `[tool.uv.sources]`, где каждый пакет берётся из этого же репозитория по тегу и подпапке:  
+2. Прод-режим — новый файл `pyproject.prod.toml`
+   • В нём только блок `[tool.uv.sources]`, где каждый пакет берётся из этого же репозитория по тегу и подпапке:
      ```toml
      bench-utils      = { git = ".../vlm-hyperbench.git", tag = "bench-utils-v0.1.2", subdirectory = "packages/bench_utils" }
      model-interface  = { git = ".../vlm-hyperbench.git", tag = "model-interface-v0.1.2", subdirectory = "packages/model_interface" }
@@ -16,7 +16,7 @@
      ```
    • При выпуске новой версии меняете `tag = ...` на актуальный.
 
-Как пользоваться  
+Как пользоваться
 ```
 # dev-режим
 uv lock
@@ -29,6 +29,6 @@ uv sync --production                    # установит пакеты из G
 
 (`uv >= 0.7` должен быть, иначе эта функция не работает!)
 
-**Итого:** 
-• «dev» — мгновенное редактирование;  
+**Итого:**
+• «dev» — мгновенное редактирование;
 • «prod» — чистые сборки из тегов GitHub без PyPI.

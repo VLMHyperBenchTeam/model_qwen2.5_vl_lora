@@ -1,13 +1,11 @@
 # Новый скрипт для генерации отчёта классификации
-from pathlib import Path
-from typing import Dict, List, Tuple
 import warnings
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Tuple
 
 import pandas as pd  # type: ignore
-
-from bench_utils.utils import load_config, get_run_id  # type: ignore
-
+from bench_utils.utils import get_run_id, load_config  # type: ignore
 
 HEADER = "# 📝 Отчёт по задаче классификации"
 
@@ -35,7 +33,7 @@ def _df_to_md_table(df: pd.DataFrame, include_index: bool = True) -> str:
         return df_formatted.to_markdown(index=include_index, tablefmt="github")  # type: ignore[attr-defined]
     except ImportError:
         warnings.warn("Пакет 'tabulate' не установлен. Отображаем таблицу в текстовом виде. "
-                      "Установите 'tabulate' для красивых Markdown-таблиц: pip install tabulate")
+                      "Установите 'tabulate' для красивых Markdown-таблиц: pip install tabulate", stacklevel=2)
         return "```\n" + df.to_string(index=include_index) + "\n```"
 
 
@@ -184,4 +182,4 @@ if __name__ == "__main__":
     report_section = cfg.get("report", {}) if isinstance(cfg, dict) else {}
     OUTPUT_PATH = Path(report_section.get("output_path", dyn_report_name))
 
-    build_report(CONFIG_PATH, OUTPUT_PATH) 
+    build_report(CONFIG_PATH, OUTPUT_PATH)

@@ -4,8 +4,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from tqdm import tqdm
-
 from bench_utils.metrics import calculate_ordering_metrics
 from bench_utils.model_utils import initialize_model, load_prompt, prepare_prompt
 from bench_utils.utils import (
@@ -13,6 +11,7 @@ from bench_utils.utils import (
     get_run_id,
     load_config,
 )
+from tqdm import tqdm
 
 
 def get_image_paths_for_document(
@@ -247,7 +246,7 @@ def run_evaluation(config: Dict[str, Any]) -> None:
     print(f"Обрабатываем документы типа: {document_type_name}")
 
     document_type_key = None
-    for key, name in config.get("document_classes", {}).items():
+    for key, _name in config.get("document_classes", {}).items():
         if key in dataset_path.name:
             document_type_key = key
             break

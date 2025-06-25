@@ -1,21 +1,20 @@
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from datetime import datetime
 
 import pandas as pd
-from tqdm import tqdm
-from sklearn.metrics import confusion_matrix, classification_report  # type: ignore
-
 from bench_utils.metrics import calculate_classification_metrics
 from bench_utils.model_utils import initialize_model, load_prompt, prepare_prompt
-from bench_utils.utils import get_run_id, load_config, save_results_to_csv
+from bench_utils.utils import load_config, save_results_to_csv
 from print_utils import (  # type: ignore
-    print_section,
-    print_info,
-    print_success,
     print_error,
     print_header,
+    print_info,
+    print_section,
+    print_success,
 )
+from sklearn.metrics import classification_report, confusion_matrix  # type: ignore
+from tqdm import tqdm
 
 
 def get_image_paths(

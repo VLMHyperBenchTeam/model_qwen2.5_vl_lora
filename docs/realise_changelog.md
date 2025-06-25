@@ -11,7 +11,7 @@
 - [x] Создание коммита - refactor: migrate prompt handling to dedicated prompt-handler package
 - [x] Создание тега - v0.1.2.dev3
 
-### model_interface  
+### model_interface
 - Статус: ✅ Завершен
 - [x] Анализ изменений - удаление load_prompt функции (BREAKING CHANGE)
 - [x] Обновление версии - 0.1.2.dev2 -> 0.1.2.dev3
@@ -63,7 +63,7 @@
 refactor: migrate prompt handling to dedicated prompt-handler package
 
 - Migrate load_prompt import from model_interface to prompt_handler
-- Add prepare_prompt import from prompt_handler  
+- Add prepare_prompt import from prompt_handler
 - Add prompt-handler dependency and workspace source
 - Update version to 0.1.2.dev3
 ```
@@ -107,7 +107,7 @@ refactor: migrate to new prompt-handler architecture
 
 ### 🚀 Push статус:
 - **model_interface**: коммиты и теги запушены в origin/refactoring ✅
-- **model_qwen2.5-vl**: коммиты и теги запушены в origin/refactoring ✅  
+- **model_qwen2.5-vl**: коммиты и теги запушены в origin/refactoring ✅
 - **основной проект**: коммиты и теги запушены в github/uv_workspaces ✅
 
 ## 🏆 ПРОЦЕСС РЕЛИЗА ПОЛНОСТЬЮ ЗАВЕРШЕН!
@@ -121,5 +121,5 @@ refactor: migrate to new prompt-handler architecture
 
 **Итоговые версии релиза:**
 - model_interface: v0.1.2.dev2
-- model_qwen2.5-vl: v0.1.2.dev3  
-- основной проект: v0.0.2 
+- model_qwen2.5-vl: v0.1.2.dev3
+- основной проект: v0.0.2

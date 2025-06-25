@@ -43,7 +43,7 @@
 - Дополним changelog с полными commit message для каждого пакета и проекта
 - Выполнить push commit и push tag для каждого измененного пакета и проекта
 
-## Шаблон Conventional Commit 
+## Шаблон Conventional Commit
 
 ### Типы коммитов:
 - `feat`: новая функциональность
