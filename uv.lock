@@ -70,7 +70,7 @@ wheels = [
 
 [[package]]
 name = "hello-world"
-version = "0.0.10.dev6"
+version = "0.0.10"
 source = { editable = "packages/hello_world" }
 
 [[package]]
