@@ -19,4 +19,4 @@ model-interface = { git = "https://github.com/VLMHyperBenchTeam/model_interface.
 model-qwen2-5-vl = { git = "https://github.com/VLMHyperBenchTeam/model_qwen2.5-vl.git", tag = "v0.1.2.dev3", subdirectory = "." }
 prompt-handler = { git = "https://github.com/VLMHyperBenchTeam/prompt_handler.git", tag = "0.0.1dev0", subdirectory = "." }
 print-utils = { git = "https://github.com/VLMHyperBenchTeam/print_utils.git", tag = "v0.0.1dev1", subdirectory = "." }
-hello-world = { git = "https://github.com/VLMHyperBenchTeam/hello_world.git", tag = "0.0.8", subdirectory = "." }
+hello-world = { git = "https://github.com/VLMHyperBenchTeam/hello_world.git", tag = "0.0.10.dev6", subdirectory = "." }
