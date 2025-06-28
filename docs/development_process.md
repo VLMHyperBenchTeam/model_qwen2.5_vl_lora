@@ -507,37 +507,48 @@ uv sync --group dev
 
 ## Git-хуки и `pre-commit`
 
-В репозитории настроены *Git hooks* через [pre-commit](https://pre-commit.com).  При обычном `git commit` хук запускает команду `pre-commit`, которая установлена внутри виртуального окружения `.venv`.
+В репозитории настроены *Git hooks* через [pre-commit](https://pre-commit.com).  При обычном `git commit` хук запускает выбранные проверки кода **до** сохранения коммита.
 
-> По умолчанию Git выполняет хуки во внешней среде, где `.venv/bin` отсутствует в `$PATH`, и вы можете увидеть ошибку вида:
->
-> ```text
-> `pre-commit` not found.  Did you forget to activate your virtualenv?
-> ```
-
-Есть два способа решить проблему.
-
-1. **Использовать `uv run` при коммитах**  — утилита автоматически добавляет `.venv/bin` в `$PATH` и запускает под тем же интерпретатором, что и workspace.
-
-   ```bash
-   uv run git commit -m "feat: commit with hooks"
-   ```
-
-   Такой подход работает и в CI скриптах.
-
-2. **Расширить `$PATH` внутри самого pre-commit hook**.  Добавьте в файл `.git/hooks/pre-commit` (он создаётся `pre-commit install`) строки:
-
-   ```bash
-   # >>> ensure virtualenv binaries are visible
-   REPO_ROOT="$(git rev-parse --show-toplevel)"
-   export PATH="$REPO_ROOT/.venv/bin:$PATH"
-   # <<<
-   ```
-
-   После этого `git commit` будет находить `pre-commit` без необходимости использовать `uv run`.
-
-Если нужно пропустить проверки для конкретного коммита, используйте стандартный флаг Git:
+### Установка/обновление хуков
 
 ```bash
-git commit --no-verify -m "chore: quick fix"
+# установить dev-зависимости (ruff, pre-commit, …)
+uv sync --group dev
+
+# зарегистрировать git-хуки (создаст .git/hooks/pre-commit)
+uv run pre-commit install
+
+# регулярно обновляйте версии линтеров
+uv run pre-commit autoupdate && git add .pre-commit-config.yaml
 ```
+
+### Что именно проверяется
+
+Файл `.pre-commit-config.yaml` подключает два набора правил:
+
+| Хук | Repo | Назначение |
+|-----|------|------------|
+| `ruff` | `charliermarsh/ruff-pre-commit` | статический анализ Python (PEP8, PyFlakes, isort и др.) |
+| `trailing-whitespace` | `pre-commit/pre-commit-hooks` | удаляет лишние пробелы/табуляцию в конце строк |
+
+При необходимости добавляйте свои плагины в `.pre-commit-config.yaml` и запускайте `pre-commit autoupdate`.
+
+### Когда срабатывают
+
+* автоматически при `git commit` (этап *pre-commit*);
+* можно запустить вручную для отдельных файлов или всего репозитория:
+  ```bash
+  uv run pre-commit run --all-files       # проверить все
+  uv run pre-commit run ruff --files path/to/file.py
+  ```
+
+### Если проверки не пройдены
+
+1. pre-commit выведет список ошибок и прервёт коммит.
+2. Исправьте файл(ы) вручную **или** примите авто-фиксы (ruff и trailing-whitespace умеют править код сами).
+3. Повторите `git add …` и `git commit`.
+4. В крайнем случае временно пропустите проверки:
+   ```bash
+   git commit --no-verify -m "chore: hot-fix"
+   ```
+   (используйте только при острой необходимости, чтобы не ломать стиль кода).
