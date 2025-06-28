@@ -21,7 +21,7 @@ members = [
 
 [[package]]
 name = "bench-utils"
-version = "0.1.2.dev3"
+version = "0.1.2"
 source = { editable = "packages/bench_utils" }
 dependencies = [
     { name = "model-interface" },
@@ -102,12 +102,12 @@ wheels = [
 
 [[package]]
 name = "model-interface"
-version = "0.1.2.dev6"
+version = "0.1.2"
 source = { editable = "packages/model_interface" }
 
 [[package]]
 name = "model-qwen2-5-vl"
-version = "0.1.2.dev4"
+version = "0.1.2"
 source = { editable = "packages/model_qwen2.5-vl" }
 dependencies = [
     { name = "model-interface" },
@@ -394,12 +394,12 @@ wheels = [
 
 [[package]]
 name = "print-utils"
-version = "0.0.1.dev2"
+version = "0.0.1"
 source = { editable = "packages/print_utils" }
 
 [[package]]
 name = "prompt-handler"
-version = "0.0.1.dev3"
+version = "0.0.1.dev1"
 source = { editable = "packages/prompt_handler" }
 
 [[package]]
