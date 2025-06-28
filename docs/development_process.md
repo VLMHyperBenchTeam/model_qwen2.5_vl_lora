@@ -378,3 +378,166 @@ hello-world = { git = "https://github.com/VLMHyperBenchTeam/hello_world", tag = 
 ```
 
 Таким образом, dev-среда использует локальный workspace, а prod-среда — выкачивает тегированную версию из GitHub.
+
+## Git-подмодули для пакетов в `./packages`
+
+Все внутренние пакеты (например `bench_utils`, `model_interface`, `model_qwen2.5-vl`, `print_utils`, `prompt_handler`, `hello_world`) теперь подключены к репозиторию как **Git submodule**. Это влияет на процесс клонирования и обновления кода.
+
+### Клонирование репозитория вместе с подмодулями
+
+```bash
+# Клонируем основной репозиторий
+git clone <repo-url>
+cd <repo>
+
+# Инициализируем и выкачиваем содержимое всех подмодулей
+git submodule update --init --recursive
+```
+
+Если пропустить последнюю команду, каталоги в `packages/*` останутся пустыми.
+
+### Обновление подмодулей
+
+Подтянуть последние изменения во **всех** подпакетах:
+
+```bash
+git submodule update --remote --merge  # или --rebase
+```
+
+Обновить **конкретный** пакет:
+
+```bash
+cd packages/model_interface
+# переходим на нужную ветку/тег и тянем изменения
+git checkout dev_branch            # или main / v0.2.1
+git pull --ff-only
+cd ../../
+
+# фиксируем новую ревизию подмодуля в родительском репо
+git add packages/model_interface
+git commit -m "chore: bump model_interface submodule"
+```
+
+### Переключение подмодуля на конкретный тег/ветку
+
+```bash
+cd packages/model_interface
+git checkout v0.2.0   # либо нужная ветка
+cd ../../
+git add packages/model_interface
+git commit -m "chore: freeze model_interface@v0.2.0"
+```
+
+### Добавление нового пакета-подмодуля
+
+```bash
+git submodule add https://github.com/VLMHyperBenchTeam/new_pkg.git packages/new_pkg
+git commit -m "feat: add new_pkg as submodule"
+```
+
+### Удаление подмодуля
+
+```bash
+git submodule deinit -f packages/old_pkg
+git rm -f packages/old_pkg
+rm -rf .git/modules/packages/old_pkg
+
+git commit -m "chore: remove old_pkg submodule"
+```
+
+### Почему мы используем submodule
+
+• Позволяют версионировать пакеты независимо и подтягивать нужные теги/ветки;
+• Исключают дублирование кода (один источник истины для каждого пакета);
+• Сохраняют полную историю Git внутри каждого подпакета;
+• При этом workflow uv-workspace (editable install) остаётся тем же — достаточно работать внутри подмодуля, и изменения сразу доступны основному проекту.
+
+#\#\# Проверьте lock-файл и окружение
+
+Перед коммитом удобно убедиться, что `uv.lock` свежий, а `.venv` совпадает с ним.
+
+```bash
+uv lock --locked      # завершится ошибкой, если lock устарел
+uv sync --check       # проверит .venv без установки
+```
+
+# prod-сборку
+```bash
+# prod-режим (каталог prod/ содержит свой pyproject.toml)
+uv lock --project prod          # создаём/обновляем prod/uv.lock
+uv sync --project prod --frozen # устанавливаем по lock-файлу
+```
+
+### Docker: частичные установки
+
+Для слоёв Docker-сборки полезны флаги `uv sync`:
+
+* `--no-install-project`  – не ставить корневой пакет;
+* `--no-install-workspace` – не ставить ни один пакет workspace;
+* `--no-install-package <pkg>` – исключить конкретный пакет.
+
+Пример минимального слоя с зависимостями **без** самого приложения:
+
+```Dockerfile
+COPY uv.lock pyproject.toml ./
+RUN uv sync --no-install-project --all-packages --frozen \
+    && rm -rf ~/.cache/uv
+```
+
+Позже, когда копируете исходники приложения, выполняете обычный `uv sync --frozen` – слой с базовыми зависимостями кэшируется.
+
+## Release Tool как dev-зависимость
+
+`release_tool` подключён как пакет-участник workspace (`members = [ ..., "release_tool" ]`),
+но находится в группе зависимостей `dev`.
+
+Это даёт два эффекта:
+
+1. При обычной разработке (`uv lock` / `uv sync`) пакет попадает в окружение
+   и его CLI-entrypoints (`release-tool-stage4`, `release-tool-clear`, …) доступны.
+2. В прод-сборках вы вызываете `uv sync --no-dev` **или** используете
+   `prod/pyproject.toml`, где `release_tool` не перечислен → пакет **не** устанавливается,
+   лишних зависимостей и скриптов нет.
+
+Если в CI нужно запустить релизные скрипты отдельно, добавьте флаг `--group dev` или
+`--all-groups` при установке окружения:
+```bash
+uv sync --group dev
+```
+
+## Git-хуки и `pre-commit`
+
+В репозитории настроены *Git hooks* через [pre-commit](https://pre-commit.com).  При обычном `git commit` хук запускает команду `pre-commit`, которая установлена внутри виртуального окружения `.venv`.
+
+> По умолчанию Git выполняет хуки во внешней среде, где `.venv/bin` отсутствует в `$PATH`, и вы можете увидеть ошибку вида:
+>
+> ```text
+> `pre-commit` not found.  Did you forget to activate your virtualenv?
+> ```
+
+Есть два способа решить проблему.
+
+1. **Использовать `uv run` при коммитах**  — утилита автоматически добавляет `.venv/bin` в `$PATH` и запускает под тем же интерпретатором, что и workspace.
+
+   ```bash
+   uv run git commit -m "feat: commit with hooks"
+   ```
+
+   Такой подход работает и в CI скриптах.
+
+2. **Расширить `$PATH` внутри самого pre-commit hook**.  Добавьте в файл `.git/hooks/pre-commit` (он создаётся `pre-commit install`) строки:
+
+   ```bash
+   # >>> ensure virtualenv binaries are visible
+   REPO_ROOT="$(git rev-parse --show-toplevel)"
+   export PATH="$REPO_ROOT/.venv/bin:$PATH"
+   # <<<
+   ```
+
+   После этого `git commit` будет находить `pre-commit` без необходимости использовать `uv run`.
+
+Если нужно пропустить проверки для конкретного коммита, используйте стандартный флаг Git:
+
+```bash
+git commit --no-verify -m "chore: quick fix"
+```
