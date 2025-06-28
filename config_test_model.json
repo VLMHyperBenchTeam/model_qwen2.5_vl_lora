@@ -1,0 +1,26 @@
+{
+    "task": {
+        "image_path": "dataset/passport/images/clean/0.jpg",
+        "prompt": "Опиши документ.",
+        "show_gpu_info": true,
+        "sample_images": [
+            "dataset/passport/images/clean/0.jpg"
+        ]
+    },
+    "model": {
+        "model_name": "Qwen2.5-VL-3B-Instruct",
+        "model_family": "Qwen2.5-VL",
+        "device_map": "cuda:0",
+        "cache_dir": "./model_cache",
+        "package": "model_qwen2_5_vl",
+        "module": "models",
+        "model_class": "Qwen2_5_VLModel",
+        "system_prompt": ""
+    },
+    "test_settings": {
+        "output_format": "text",
+        "verbose": true,
+        "save_results": false,
+        "show_technical_logs": false
+    }
+}

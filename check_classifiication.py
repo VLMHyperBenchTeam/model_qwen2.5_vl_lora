@@ -1,71 +1,20 @@
-import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from model_interface.model_factory import ModelFactory
-from sklearn.metrics import (
-    accuracy_score,
-    classification_report,
-    f1_score,
-    precision_score,
-    recall_score,
+from bench_utils.metrics import calculate_classification_metrics
+from bench_utils.model_utils import initialize_model, load_prompt, prepare_prompt
+from bench_utils.utils import load_config, save_results_to_csv
+from print_utils import (  # type: ignore
+    print_error,
+    print_header,
+    print_info,
+    print_section,
+    print_success,
 )
+from sklearn.metrics import classification_report, confusion_matrix  # type: ignore
 from tqdm import tqdm
-
-
-def load_config(config_path: str = "config_classification.json") -> Dict[str, Any]:
-    """Загружает конфигурацию из JSON файла.
-
-    Args:
-        config_path (str): Путь к файлу конфигурации JSON.
-
-    Returns:
-        Dict[str, Any]: Словарь с параметрами конфигурации.
-
-    Raises:
-        FileNotFoundError: Если файл конфигурации не найден по указанному пути.
-    """
-    config_file = Path(config_path)
-    if not config_file.exists():
-        raise FileNotFoundError(f"Файл конфигурации {config_path} не найден")
-    with config_file.open("r") as f:
-        return json.load(f)
-
-
-def initialize_model(config: Dict[str, Any]) -> Any:
-    """Инициализирует и возвращает модель согласно конфигурации.
-
-    Args:
-        config (Dict[str, Any]): Словарь конфигурации, содержащий секции
-            'model' с параметрами для инициализации модели.
-
-    Returns:
-        Any: Инициализированный объект модели.
-    """
-    model_config = config["model"]
-
-    model_family = model_config["model_family"]
-    cache_dir = Path(model_config["cache_dir"])
-    cache_dir.mkdir(exist_ok=True)
-
-    # Формируем путь к классу модели из конфигурации
-    package = model_config["package"]
-    module = model_config["module"]
-    model_class = model_config["model_class"]
-    model_class_path = f"{package}.{module}:{model_class}"
-
-    # Регистрация модели в фабрике
-    ModelFactory.register_model(model_family, model_class_path)
-
-    model_params = {
-        "model_name": model_config["model_name"],
-        "system_prompt": model_config.get("system_prompt", ""),
-        "cache_dir": model_config["cache_dir"],
-        "device_map": model_config["device_map"],
-    }
-    print(f"Инициализация модели: {model_config['model_name']}")
-    return ModelFactory.get_model(model_family, model_params)
 
 
 def get_image_paths(
@@ -91,7 +40,7 @@ def get_image_paths(
         List[Path]: Список объектов Path, ведущих к выбранным изображениям.
     """
     selected_files = []
-    print(f"\n📂 Обработка сабсета: {subset_name}")
+    print_section(f"Обработка сабсета: {subset_name}")
     for class_name in class_names:
         class_dir = dataset_path / class_name / "images" / subset_name
         if not class_dir.exists():
@@ -107,7 +56,7 @@ def get_image_paths(
             else:
                 selected_files.extend(p for p in path.iterdir() if p.is_file())
 
-    print(f"Найдено файлов для обработки: {len(selected_files)}")
+    print_info(f"Найдено файлов: {len(selected_files)}")
     return selected_files
 
 
@@ -128,7 +77,7 @@ def get_prediction(
     """
     try:
         # Передаем путь к изображению напрямую в модель
-        result = model.predict_on_image(image=str(image_path), question=prompt)
+        result = model.predict_on_image(image=str(image_path), prompt=prompt)
         prediction = result.strip().strip('"')
 
         if prediction.isdigit():
@@ -141,7 +90,7 @@ def get_prediction(
         return "None"
 
     except Exception as e:
-        print(f"Ошибка при классификации файла {image_path.name}: {e}")
+        print_error(f"Ошибка при классификации файла {image_path.name}: {e}")
         return "None"
 
 
@@ -154,9 +103,6 @@ def calculate_and_save_metrics(
 ) -> Dict[str, float]:
     """Вычисляет и сохраняет метрики, возвращает словарь с основными метриками.
 
-    Создает отчет о классификации и CSV-файл с метриками для каждого класса,
-    а также CSV-файл с общими метриками (accuracy, f1, precision, recall).
-
     Args:
         y_true (List[str]): Список истинных меток классов.
         y_pred (List[str]): Список предсказанных меток классов.
@@ -165,38 +111,89 @@ def calculate_and_save_metrics(
         document_classes (Dict[str, str]): Словарь классов документов.
 
     Returns:
-        Dict[str, float]: Словарь с вычисленными средневзвешенными метриками
-                          или пустой словарь, если данных для расчета нет.
+        Dict[str, float]: Словарь с вычисленными метриками или пустой словарь.
     """
+    metrics = calculate_classification_metrics(y_true, y_pred, document_classes)
+    if metrics:
+        save_results_to_csv(
+            metrics, f"{run_id}_{subset_name}_classification_results.csv", subset_name
+        )
+    return metrics
+
+
+def calculate_and_save_confusion_matrix(
+    y_true: List[str],
+    y_pred: List[str],
+    subset_name: str,
+    run_id: str,
+    document_classes: Dict[str, str],
+) -> None:
+    """Вычисляет матрицу ошибок и сохраняет её в CSV файл.
+
+    Args:
+        y_true (List[str]): Список истинных меток классов.
+        y_pred (List[str]): Список предсказанных меток классов.
+        subset_name (str): Имя сабсета, для которого вычисляется матрица.
+        run_id (str): Идентификатор запуска, используется в имени выходного файла.
+        document_classes (Dict[str, str]): Словарь классов документов.
+    """
+
     if not y_true:
-        print("Нет данных для оценки метрик.")
-        return {}
+        print("Нет данных для построения confusion matrix.")
+        return
+
+    # Формируем полный список меток, включая возможный класс 'None'
+    labels = list(document_classes.keys())
+    if "None" in set(y_pred):
+        labels.append("None")
+
+    # Обычная (ненормализованная) матрица ошибок — абсолютные количества
+    cm = confusion_matrix(y_true, y_pred, labels=labels)
+
+    # Преобразуем в DataFrame и округляем значения для наглядности
+    cm_df = pd.DataFrame(cm, index=labels, columns=labels).round(4)
+
+    print_section(f"Confusion Matrix для сабсета {subset_name}")
+    print(cm_df)
+
+    cm_filename = f"{run_id}_{subset_name}_confusion_matrix.csv"
+    cm_df.to_csv(cm_filename)
+    print_success(f"Матрица сохранена в {cm_filename}")
+
+
+def calculate_and_save_class_report(
+    y_true: List[str],
+    y_pred: List[str],
+    subset_name: str,
+    run_id: str,
+    document_classes: Dict[str, str],
+) -> None:
+    """Сохраняет подробный classification_report (precision/recall/F1 per class).
+
+    Args:
+        y_true: истинные метки.
+        y_pred: предсказанные метки.
+        subset_name: имя сабсета или 'overall'.
+        run_id: идентификатор запуска.
+        document_classes: словарь классов.
+    """
+
+    if not y_true:
+        return
 
     all_classes = list(document_classes.keys())
     if "None" in set(y_pred):
         all_classes.append("None")
 
-    print(f"\n📊 Отчет по классификации для сабсета {subset_name}:")
     report = classification_report(
         y_true, y_pred, labels=all_classes, output_dict=True, zero_division=0
     )
-    report_df = pd.DataFrame(report).transpose()
-    report_df.to_csv(f"{run_id}_{subset_name}_per_class_metrics.csv")
-    print(report_df)
 
-    metrics = {
-        "accuracy": accuracy_score(y_true, y_pred),
-        "f1": f1_score(y_true, y_pred, average="weighted", zero_division=0),
-        "precision": precision_score(
-            y_true, y_pred, average="weighted", zero_division=0
-        ),
-        "recall": recall_score(y_true, y_pred, average="weighted", zero_division=0),
-    }
+    report_df = pd.DataFrame(report).transpose().round(4)
 
-    results_df = pd.DataFrame([metrics])
-    results_df.to_csv(f"{run_id}_{subset_name}_classification_results.csv", index=False)
-
-    return metrics
+    out_path = f"{run_id}_{subset_name}_class_report.csv"
+    report_df.to_csv(out_path)
+    print_success(f"Отчёт по классам сохранён в {out_path}")
 
 
 def run_evaluation(config: Dict[str, Any]) -> None:
@@ -210,23 +207,37 @@ def run_evaluation(config: Dict[str, Any]) -> None:
         config (Dict[str, Any]): Словарь с полной конфигурацией для запуска,
                                 содержащий секции 'task', 'model' и 'document_classes'.
     """
+    # --- Вывод параметров перед стартом ---
+    print_header()
+    print_section("ПАРАМЕТРЫ ОЦЕНКИ")
+
     task_config = config["task"]
     model_config = config["model"]
     document_classes = config["document_classes"]
+
+    print_info(f"Датасет: {task_config['dataset_path']}")
+    print_info(f"Subsets: {', '.join(task_config['subsets'])}")
+    if task_config.get("sample_size"):
+        print_info(f"Sample size: {task_config['sample_size']}")
+    print_info(f"Модель: {model_config['model_name']}")
 
     dataset_path = Path(task_config["dataset_path"])
     prompt_path = Path(task_config["prompt_path"])
     sample_size = task_config.get("sample_size")
 
-    model = initialize_model(config)
+    model = initialize_model(model_config)
 
-    prompt_template = prompt_path.read_text(encoding="utf-8")
+    template = load_prompt(prompt_path)
     classes_str = ", ".join(
         f"{idx}: {name}" for idx, name in enumerate(document_classes.values())
     )
-    prompt = prompt_template.format(classes=classes_str)
+    prompt = prepare_prompt(template, classes=classes_str)
 
-    run_id = Path(model_config["model_name"]).stem
+    # Формируем уникальный run_id = <model>_<prompt>_<YYYYMMDD_HHMMSS>
+    model_name_clean = model_config["model_name"].replace(" ", "_")
+    prompt_name = prompt_path.stem
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_id = f"{model_name_clean}_{prompt_name}_{timestamp}"
     all_metrics = []
 
     for subset in task_config["subsets"]:
@@ -238,29 +249,49 @@ def run_evaluation(config: Dict[str, Any]) -> None:
             continue
 
         y_true, y_pred = [], []
-        # Использование `path.parts` делает код более надежным и независимым от ОС.
-        # Структура пути: ./dataset/{class_name}/images/{subset_name}/...
-        # Поэтому `class_name` это 4-й элемент с конца (индекс -4).
         for path in tqdm(image_paths, desc=f"Обработка {subset}"):
-            y_true.append(path.parts[-4])
+            try:
+                # Имя класса всегда является первым сегментом после корневой директории датасета.
+                class_name = path.relative_to(dataset_path).parts[0]
+            except ValueError:
+                # На случай, если path не является прямым потомком dataset_path
+                class_name = path.parts[-5] if len(path.parts) >= 5 else "Unknown"
+
+            y_true.append(class_name)
             y_pred.append(get_prediction(model, path, prompt, document_classes))
 
         subset_metrics = calculate_and_save_metrics(
             y_true, y_pred, subset, run_id, document_classes
         )
+        # --- Confusion matrix ---
+        calculate_and_save_confusion_matrix(
+            y_true, y_pred, subset, run_id, document_classes
+        )
+        # --- Class-wise detailed metrics ---
+        calculate_and_save_class_report(
+            y_true, y_pred, subset, run_id, document_classes
+        )
         if subset_metrics:
             all_metrics.append(subset_metrics)
+
+    # --- Общий отчёт по классам на всём датасете ---
+    if y_true and y_pred:
+        calculate_and_save_class_report(
+            y_true, y_pred, "overall", run_id, document_classes
+        )
 
     if all_metrics:
         final_df = pd.DataFrame(all_metrics)
         avg_metrics = final_df.mean()
-        print("\n📊 Средние метрики по всем сабсетам:")
-        print(f"  Средняя точность (Accuracy): {avg_metrics['accuracy']:.4f}")
-        print(f"  Средний F1-score: {avg_metrics['f1']:.4f}")
-        print(f"  Средняя точность (Precision): {avg_metrics['precision']:.4f}")
-        print(f"  Средний отзыв (Recall): {avg_metrics['recall']:.4f}")
+        print_section("Средние метрики по всем сабсетам")
+        print_info(f"Средняя точность (Accuracy): {avg_metrics['accuracy']:.4f}")
+        print_info(f"Средний F1-score: {avg_metrics['f1']:.4f}")
+        print_info(f"Средняя точность (Precision): {avg_metrics['precision']:.4f}")
+        print_info(f"Средний отзыв (Recall): {avg_metrics['recall']:.4f}")
 
-        final_df.to_csv(f"{run_id}_final_classification_results.csv", index=False)
+        out_file = f"{run_id}_final_classification_results.csv"
+        final_df.to_csv(out_file, index=False)
+        print_success(f"Итоговые метрики сохранены в {out_file}")
 
 
 def main() -> None:
@@ -269,10 +300,10 @@ def main() -> None:
     Загружает конфигурацию и запускает основной цикл оценки.
     """
     try:
-        config = load_config()
+        config = load_config("config_classification.json")
         run_evaluation(config)
     except (FileNotFoundError, KeyError) as e:
-        print(f"Ошибка: {e}")
+        print_error(f"Ошибка: {e}")
 
 
 if __name__ == "__main__":
