@@ -7,9 +7,37 @@
 > uv sync --extra cu124   # или cu128
 > ```
 
-## 1. dev-сборка (packages/* в режиме workspace)
+## 1. Git submodules
 
-1. Скопировать пакет в `packages/<pkg>` (должен содержать `pyproject.toml`).
+Все внутренние пакеты подключаются в репозиторий как **git submodule**. Это позволяет:
+
+- фиксировать пакет на конкретной ревизии;
+- обновлять его командой `git submodule update --remote`;
+- иметь отдельную историю коммитов.
+
+### Основные команды
+
+```bash
+git submodule update --init --recursive          # git clone + инициализация
+
+git submodule update --remote --merge            # обновить все пакеты
+
+# добавить новый пакет
+git submodule add https://github.com/ORG/new_pkg.git packages/new_pkg
+
+# удалить пакет
+git submodule deinit -f packages/old_pkg && git rm -f packages/old_pkg
+```
+
+> После добавления нового submodule не забудьте выполнить:
+> ```bash
+> git submodule update --init
+> ```
+> чтобы подтянуть исходники и корректно зафиксировать хеш в родительском репозитории.
+
+## 2. dev-сборка (packages/* в режиме workspace)
+
+1. Убедитесь, что пакет присутствует в каталоге `packages/<pkg>` (добавлен как submodule) и содержит `pyproject.toml`.
 1. Убедиться, что в корневом `pyproject.toml` пакет объявлен в `[tool.uv.sources]`:
    ```toml
    [tool.uv.sources]
@@ -21,7 +49,7 @@
    uv sync --extra cu124 --all-packages   # или cu128
    ```
 
-## 2. staging-сборка (фиксация dev-тегов)
+## 3. staging-сборка (фиксация dev-тегов)
 
 После того как пакет получил dev-тег (например `v0.1.0.dev0`):
 
@@ -36,7 +64,7 @@
    uv sync --project staging --frozen --extra cu124   # или cu128
    ```
 
-## 3. prod-сборка (стабильный релиз)
+## 4. prod-сборка (стабильный релиз)
 
 В `prod/pyproject.toml` укажите стабильный Git-тег:
 
@@ -50,29 +78,3 @@ hello-world = { git = "https://github.com/USER/hello_world", tag = "v0.1.0", sub
 uv lock --project prod
 uv sync --project prod --frozen --extra cu124   # или cu128
 ```
-
-## 4. Git submodules
-
-Все внутренние пакеты подключаются как submodule, что позволяет:
-
-- фиксировать пакет на конкретной ревизии;
-- обновлять одним `git submodule update --remote`;
-- иметь отдельную историю коммитов.
-
-### Основные команды
-
-```bash
-git submodule update --init --recursive          # клон + инициализация
-
-git submodule update --remote --merge            # обновить все пакеты
-
-git submodule add https://github.com/ORG/new_pkg.git packages/new_pkg   # добавить
-
-git submodule deinit -f packages/old_pkg && git rm -f packages/old_pkg  # удалить
-```
-
-> После добавления нового submodule не забудьте выполнить:
-> ```bash
-> git submodule update --init
-> ```
-> чтобы подтянуть исходники и корректно зафиксировать хеш в родительском репозитории.
