@@ -1,0 +1,20 @@
+{
+    "defaults": {
+      "dockerfile": "docker/Dockerfile-uv",
+      "context": "."
+    },
+    "builds": [
+      {
+        "mode": "prod",
+        "tag": "myproject:prod-cu124",
+        "base_image": "nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04",
+        "uv_version": "0.7.18",
+        "cmake_version": "3.29.2",
+        "toml_path": "prod/pyproject.toml",
+        "lock_path": "py310_cu124.lock",
+        "torch_index": "https://download.pytorch.org/whl/cu124",
+        "platforms": "linux/amd64",
+        "load": true
+      }
+    ]
+  }

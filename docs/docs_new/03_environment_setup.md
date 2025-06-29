@@ -116,6 +116,42 @@ uv lock --project prod --extra cu124 -o prod/uv-cu124.lock
    uv run python -c "import torch; print('OK')"
    ```
 
+## 7. Генерация lock-файла для PyTorch wheels
+
+Иногда нужно собрать _несколько_ окружений (разные CUDA). Вместо проекта можно скомпилировать отдельный lock-файл и потом ставить использовать его.
+
+```bash
+CUDA="cu124"
+PYTORCH_URL="https://download.pytorch.org/whl/${CUDA}"
+
+# 1) Создаём lock-файл (Python 3.10 + backend cu124)
+uv pip compile pyproject.toml \
+  --python 3.10 \
+  --extra ${CUDA} \
+  --output-file py310_${CUDA}.lock \
+  --index-url "${PYTORCH_URL}" \
+  --extra-index-url https://pypi.org/simple \
+  --index-strategy unsafe-best-match
+
+# 2) Синхронизируем любое окружение строго по lock-файлу
+uv pip sync py310_${CUDA}.lock \
+  --index-url "${PYTORCH_URL}" \
+  --extra-index-url https://pypi.org/simple \
+  --index-strategy unsafe-best-match
+```
+
+Ключевые флаги:
+
+| Опция | Что делает |
+|-------|------------|
+| `--index-url` | Указывает основной репозиторий (PyTorch wheels). |
+| `--extra-index-url` | Добавляет PyPI вторым источником. |
+| `--index-strategy unsafe-best-match` | Разрешает искать пакеты во **всех** индексах, а не только в первом найденном. |
+
+> 🔗 Официальная документация: [uv — pip interface / alternative indexes](https://docs.astral.sh/uv/guides/projects/) и [locking & syncing](https://docs.astral.sh/uv/concepts/projects/sync/).
+
+После этого `py310_cu124.lock` можно положить в репозиторий и использовать в Docker-сборке (см. главу [«Docker и деплой»](07_docker_deployment.md)).
+
 ## 🎯 Что дальше?
 
 - **[Управление зависимостями](04_dependency_management.md)** — добавление и обновление пакетов

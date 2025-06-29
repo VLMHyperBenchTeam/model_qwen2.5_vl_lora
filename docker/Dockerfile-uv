@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 ###############################################################################
 # Универсальный Dockerfile: dev и prod в одном                              #
 # ─────────────────────────────────────────────────────────────────────────── #
@@ -11,14 +12,19 @@
 ###############################################################################
 
 ######################## 0. Параметры ########################################
-ARG CUDA_VERSION=12.4.1
-ARG CUDA_VARIANT=cudnn          # cudnn | runtime | base
-ARG UBUNTU_VERSION=22.04
+ARG BASE_IMAGE
 ARG CMAKE_VERSION=3.26.1
+ARG UV_VERSION=0.7.16
+ARG TOML_PATH
+ARG LOCK_PATH
+ARG TORCH_INDEX
+ARG EXTRA_INDEX=https://pypi.org/simple
+ARG INDEX_STRATEGY=unsafe-best-match
 
 ######################## 1. Базовый слой #####################################
-FROM nvidia/cuda:${CUDA_VERSION}-${CUDA_VARIANT}-devel-ubuntu${UBUNTU_VERSION} AS base
+FROM ${BASE_IMAGE} AS base
 
+ARG UV_VERSION
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
@@ -30,7 +36,7 @@ RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN git lfs install
 
 # ---- статический бинарь uv --------------------------------------------------
-ENV UV_VERSION=0.7.16
+ENV UV_VERSION=${UV_VERSION}
 RUN curl -LsSf https://astral.sh/uv/${UV_VERSION}/install.sh | sh
 ENV PATH=/root/.local/bin:$PATH
 
@@ -39,18 +45,26 @@ ENV PATH=/root/.local/bin:$PATH
 ###############################################################################
 FROM base AS deps-devp
 WORKDIR /build
-COPY pyproject.toml uv.lock ./
+COPY ${TOML_PATH} pyproject.toml
+COPY ${LOCK_PATH} uv.lock
 COPY packages ./packages
 COPY release_tool ./release_tool
-RUN uv sync --locked
+RUN uv pip sync uv.lock \
+    --index-url ${TORCH_INDEX} \
+    --extra-index-url ${EXTRA_INDEX} \
+    --index-strategy ${INDEX_STRATEGY}
 
 ###############################################################################
 # 2.b deps-prod: минимальное окружение из prod-lock (без исходников)
 ###############################################################################
 FROM base AS deps-prod
 WORKDIR /build
-COPY prod/pyproject.toml prod/uv.lock ./
-RUN uv sync --locked
+COPY ${TOML_PATH} pyproject.toml
+COPY ${LOCK_PATH} uv.lock
+RUN uv pip sync uv.lock \
+    --index-url ${TORCH_INDEX} \
+    --extra-index-url ${EXTRA_INDEX} \
+    --index-strategy ${INDEX_STRATEGY}
 
 ###############################################################################
 # 3. wheel-dev: сборка flash-attn в dev-env
@@ -104,9 +118,19 @@ CMD ["/bin/bash"]
 ###############################################################################
 FROM base AS prod
 WORKDIR /workspace
-COPY prod/pyproject.toml prod/uv.lock ./
-RUN uv sync --locked
+COPY ${TOML_PATH} pyproject.toml
+COPY ${LOCK_PATH} uv.lock
+RUN uv pip sync uv.lock \
+    --index-url ${TORCH_INDEX} \
+    --extra-index-url ${EXTRA_INDEX} \
+    --index-strategy ${INDEX_STRATEGY}
 COPY --from=wheel-prod /wheelhouse/flash_attn*.whl /tmp/
 RUN uv pip install --no-deps /tmp/flash_attn*.whl
 ENV PATH="/workspace/.venv/bin:${PATH}"
 CMD ["/bin/bash"]
+
+# финальная установка зависимостей по lock-файлу
+RUN uv pip sync uv.lock \
+    --index-url ${TORCH_INDEX} \
+    --extra-index-url ${EXTRA_INDEX} \
+    --index-strategy ${INDEX_STRATEGY}
