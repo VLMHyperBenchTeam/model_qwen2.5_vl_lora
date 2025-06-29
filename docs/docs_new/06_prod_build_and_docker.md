@@ -38,4 +38,4 @@ RUN uv sync --no-install-project --all-packages --frozen \
 
 ______________________________________________________________________
 
-**Полная инструкция со всеми аргументами, параметрами CUDA и FAQ находится в** [`docker_builder_full.md`](docker_builder_full.md).
+**Полная инструкция со всеми аргументами, параметрами CUDA и FAQ находится в** [`07_docker_builder_full.md`](07_docker_builder_full.md).
