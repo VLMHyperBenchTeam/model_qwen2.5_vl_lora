@@ -63,6 +63,7 @@ dev = [
     "pre-commit>=3.7.0",
     "mypy>=1.9",
     "release-tool",
+    "mdformat>=0.7.22",
 ]
 
 [tool.mypy]
