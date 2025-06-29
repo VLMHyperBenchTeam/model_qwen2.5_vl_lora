@@ -24,6 +24,9 @@
 ```bash
 uv sync --group dev          # установить ruff, pre-commit …
 uv run pre-commit install    # добавить .git/hooks/pre-commit
+
+# или сразу все возможные хуки
+uv run pre-commit install --all-hooks
 ```
 
 ### Ручной запуск

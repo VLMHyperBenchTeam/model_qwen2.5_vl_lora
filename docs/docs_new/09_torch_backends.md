@@ -13,6 +13,8 @@ uv sync --extra cu124   # CUDA 12.4
 uv sync --extra cu128   # CUDA 12.8
 ```
 
+> Пакеты PyTorch загружаются только из официальных репозиториев `https://download.pytorch.org/whl`. Использование сторонних mirror-ов в uv 0.7 не поддерживается.
+
 Проверка без изменения lock-файла:
 
 ```bash

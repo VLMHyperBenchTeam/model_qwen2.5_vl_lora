@@ -58,3 +58,10 @@ git submodule add https://github.com/ORG/new_pkg.git packages/new_pkg   # доб
 
 git submodule deinit -f packages/old_pkg && git rm -f packages/old_pkg  # удалить
 ```
+
+> После добавления нового submodule не забудьте выполнить:
+>
+> ```bash
+> git submodule update --init
+> ```
+> чтобы подтянуть исходники и корректно зафиксировать хеш в родительском репозитории.

@@ -22,19 +22,25 @@ model-qwen2-5-vl = { git = "https://github.com/VLMHyperBenchTeam/model-qwen2-5-v
 uv lock
 uv sync
 
-# prod-режим (uv ≥ 0.7)
-uv lock   --project prod   --frozen   # генерируем/проверяем prod/uv.lock
-uv sync   --project prod   --frozen   # устанавливаем зависимости из Git-тегов
+# prod-режим
+
+# 1. Создать lock-файл, если его ещё нет,
+#    или пересчитать при изменениях зависимостей
+uv lock --project prod
+
+# 2. Проверить, что prod/uv.lock актуален
+uv lock --project prod --locked    # ошибка, если lock устарел
+
+# 3. Установить окружение строго по lock-файлу
+uv sync --project prod --frozen
 ```
 
-Ключ `--frozen` запрещает обновлять lock-файл и гарантирует идентичную установку.
-
-Если uv поддерживает прямой путь к файлу:
-
-```bash
-uv lock  --project pyproject.prod.toml
-uv sync  --project pyproject.prod.toml --frozen
-```
+> Совет: вместо каталога `prod` можно передать путь к конкретному файлу:
+>
+> ```bash
+> uv lock  --project pyproject.prod.toml
+> uv sync  --project pyproject.prod.toml --frozen
+> ```
 
 ## 3. Итог
 

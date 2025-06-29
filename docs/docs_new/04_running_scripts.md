@@ -13,8 +13,8 @@
 Примеры:
 
 ```bash
-uv run python check_classifiication.py               # обычный скрипт
-uv run ./check_classifiication.py                    # если есть shebang
+uv run python check_classification.py               # обычный скрипт
+uv run ./check_classification.py                    # если есть shebang
 uv run python check_page_sorting.py --config conf.json
 uv run bash scripts/do_something.sh                  # shell-скрипт
 uv run --with "torch==2.3.0" python my_bench.py    # временно другая версия пакета

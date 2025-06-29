@@ -12,7 +12,7 @@ uv sync --check     # убедиться, что .venv соответствуе�
 ## 2. Prod-режим
 
 ```bash
-uv lock --project prod          # создать/обновить prod/uv.lock
+uv lock --project prod          # создать или пересчитать prod/uv.lock
 uv sync --project prod --frozen # установка по lock-файлу
 ```
 
