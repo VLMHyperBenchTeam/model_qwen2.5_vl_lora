@@ -184,6 +184,52 @@ dev = [
 
 **Итого:** `uv add` полностью покрывает сценарии ручного редактирования `pyproject.toml`; просто выбирайте каталог/флаги, чтобы направить изменение либо в корень, либо в конкретный пакет.
 
+### Пример: добавляем зависимости для `model_qwen2.5-vl`
+
+Допустим, пакету понадобились `torch`, `transformers` и утилиты `qwen-vl-utils`.
+
+```bash
+# из корня репозитория
+uv add torch>=2.3.0 transformers>=4.41.0 qwen-vl-utils>=0.0.10 \
+       --package model-qwen2_5-vl
+
+# или эквивалентно из каталога самого пакета
+cd packages/model_qwen2.5-vl
+uv add torch>=2.3.0 transformers>=4.41.0 qwen-vl-utils>=0.0.10
+```
+
+После команды `uv add`:
+1. строки с новыми библиотеками будут добавлены в `packages/model_qwen2.5-vl/pyproject.toml`;
+2. файл `uv.lock` обновится;
+3. зависимости установятся в `.venv`.
+
+> ⚡ Если хотите ускорить инференс, можно добавить *опциональную* зависимость FlashAttention-2:
+>
+> ```bash
+> uv add flash-attn --package model-qwen2_5-vl --optional flash
+> ```
+>
+> Она запишется в `[project.optional-dependencies.flash]`, а установка останется необязательной.
+
+#### Установка optional-extra `flash`
+
+Чтобы подтянуть опциональные зависимости (extras) в окружение, используйте ключ `--extra` (или `--all-extras`). Примеры:
+
+```bash
+# запустить скрипт, временно добавив extra «flash»
+uv run --extra flash python run_vqa.py
+
+# установить extra «flash» в .venv «на постой»
+uv sync --extra flash
+
+# установить сразу все optional-extras проекта
+uv sync --all-extras
+```
+
+Команда `uv run` автоматически проверит lock-файл, при необходимости обновит его и
+подмешает нужные пакеты в текущую сессию. `uv sync` — подходит для постоянного
+добавления extra-зависимостей в виртуальное окружение проекта.
+
 ## Запуск скриптов
 
 В uv workspace есть два основных варианта.
@@ -552,3 +598,115 @@ uv run pre-commit autoupdate && git add .pre-commit-config.yaml
    git commit --no-verify -m "chore: hot-fix"
    ```
    (используйте только при острой необходимости, чтобы не ломать стиль кода).
+
+## Переключение backend-а PyTorch (CUDA 12.4 / 12.8)
+
+В рабочем пространстве предусмотрены **extras** для разных вариантов бэкэнда PyTorch:
+
+| Extra | Описание | Индекс PyTorch |
+|-------|----------|----------------|
+| `cu124` | CUDA 12.4 + cuDNN | https://download.pytorch.org/whl/cu124 |
+| `cu128` | CUDA 12.8 + cuDNN | https://download.pytorch.org/whl/cu128 |
+
+При необходимости легко добавить новые (`cu118`, `cu128`, …)
+
+### Локальная установка (dev-режим)
+
+```bash
+# CUDA 12.4
+uv sync --extra cu124
+
+# CUDA 12.8
+uv sync --extra cu128
+
+# убедиться, что lock не изменился, но окружение актуально
+uv sync --check
+```
+
+Для генерации/обновления lock-файла используйте те же extra:
+
+```bash
+uv lock --extra cu124     # пересчитать под CUDA 12.4
+uv lock --extra cu128     # пересчитать под CUDA 12.8
+```
+
+### Prod-режим
+
+В каталоге `prod/` лежит собственный `pyproject.toml`. Логика такая же, только добавляйте флаги `--project prod` и `--frozen`:
+
+```bash
+# prod, CUDA 12.4
+uv lock   --project prod --extra cu124      # если нужно обновить lock
+uv sync   --project prod --extra cu124 --frozen
+
+# prod, CUDA 12.8
+uv lock   --project prod --extra cu128      # если нужно обновить lock
+uv sync   --project prod --extra cu128 --frozen
+```
+
+### Docker: dev и prod образы под разные backend-варианты
+
+`docker/Dockerfile-cu124-uv` умеет переключаться между CUDA-вариантами с помощью build-arg `TORCH_BACKEND`.
+Примеры команд:
+
+```bash
+# dev-образ: CUDA 12.4
+docker build -f docker/Dockerfile-cu124-uv \
+  --target dev \
+  --build-arg TORCH_BACKEND=cu124 \
+  -t project:dev-cu124 .
+
+# dev-образ: CUDA 12.8
+docker build -f docker/Dockerfile-cu124-uv \
+  --target dev \
+  --build-arg TORCH_BACKEND=cu128 \
+  -t project:dev-cu128 .
+
+# prod-образ: CUDA 12.4
+docker build -f docker/Dockerfile-cu124-uv \
+  --target prod \
+  --build-arg TORCH_BACKEND=cu124 \
+  -t project:prod-cu124 .
+
+# prod-образ: CUDA 12.8
+docker build -f docker/Dockerfile-cu124-uv \
+  --target prod \
+  --build-arg TORCH_BACKEND=cu128 \
+  -t project:prod-cu128 .
+```
+
+> За подробностями обратитесь к документу [`docker/Docker_builder.md`](../docker/Docker_builder.md).
+
+## Выбор целевой версии Python (3.10 ↔ 3.12)
+
+В `pyproject.toml` задан широкий диапазон `requires-python = ">=3.10, !=3.11.*, <3.13"`,
+поэтому `uv lock` по-умолчанию пытается найти **универсальное** решение, подходящее
+сразу для 3.10 и 3.12.  Если нужно сгенерировать или установить окружение строго под
+конкретный интерпретатор, используйте флаг `--python` (не `--python-version`) — он
+поддерживается во всех основных командах (`uv lock`, `uv sync`, `uv run`, …):
+
+```bash
+# lock-файл только для CPython 3.10
+uv lock --python 3.10 --extra cu124
+
+# lock-файл только для CPython 3.12
+uv lock --python 3.12 --extra cu128
+
+# установка окружения под 3.12 + CUDA 12.8
+uv sync --python 3.12 --extra cu128
+```
+
+Чтобы постоянно работать с одной версией Python и не писать флаг каждый раз,
+Можно зафиксировать её в `.python-version`:
+
+```bash
+uv python pin 3.12   # создаст/обновит файл .python-version
+```
+
+После этого uv автоматически возьмёт прописанную версию при любой операции.
+Если pinned-версия нарушает ограничение `requires-python`, uv выдаст ошибку.
+
+> ⚠️  В релизе uv 0.7 флаг называется именно `--python`; параметра
+> `--python-version` нет, поэтому команды вида `uv sync --python-version 3.12`
+> завершатся ошибкой «unexpected argument».  Проверяйте подсказку `--help` при
+> обновлении инструмента.
