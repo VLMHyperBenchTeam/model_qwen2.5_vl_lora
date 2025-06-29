@@ -197,12 +197,10 @@ if __name__ == "__main__":
     model_name_clean = model_name.replace(" ", "_")
 
     prompt_name = Path(cfg["task"].get("prompt_path", "prompt")).stem
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
+    # Всегда используем динамическое имя с timestamp
     dyn_report_name = f"reports/report_{model_name_clean}_{prompt_name}_{timestamp}.md"
-
-    # Если явно указан путь в конфиге — используем его, иначе динамический
-    report_section = cfg.get("report", {}) if isinstance(cfg, dict) else {}
-    OUTPUT_PATH = Path(report_section.get("output_path", dyn_report_name))
+    OUTPUT_PATH = Path(dyn_report_name)
 
     build_report(CONFIG_PATH, OUTPUT_PATH)
