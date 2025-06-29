@@ -736,3 +736,15 @@ RUN uv sync --locked
 pip install model-qwen2-5-vl[cu124] \
   --extra-index-url=https://download.pytorch.org/whl/cu124
 ```
+
+#### Установка optional-extra `flash`
+
+> Если вы собрали собственный wheel `flash-attn` (например внутри Docker, см. `docker/uv_flash_attention_build.md`) и
+> выложили его в релиз GitHub, пропишите прямую ссылку вместо версии:
+>
+> ```toml
+> [project.optional-dependencies.flash]
+> flash-attn @ https://github.com/USER/REPO/releases/download/vX.Y.Z/flash_attn-2.6.1+cu124torch2.4.0-cp312-cp312-linux_x86_64.whl
+> ```
+>
+> Тогда `uv sync --extra flash` подтянет именно ваш подготовленный бинарник.

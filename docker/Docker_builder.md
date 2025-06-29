@@ -119,6 +119,37 @@ docker build \
 ```
 *Исходников внутри нет — только скомпилированные зависимости, wheel `flash-attn` и ваши пакет(ы) из `prod/pyproject.toml`.*
 
+## Проверка и публикация wheel FlashAttention
+
+После слоёв `wheel-dev` / `wheel-prod` внутри образа появляется собранный wheel `flash_attn`. Ниже приведены быстрые приёмы, как убедиться, что он рабочий, и при необходимости выгрузить его для повторного использования.
+
+### Smoke-тест
+```bash
+docker run --gpus all --rm -it myproj:dev-cu124 \
+  python - <<'PY'
+import torch, flash_attn
+print('CUDA:', torch.version.cuda)
+print('Flash-Attn:', flash_attn.__version__)
+PY
+```
+
+### Извлечь wheel на хост
+```bash
+id=$(docker create myproj:dev-cu124)
+docker cp "$id":/wheelhouse/flash_attn*.whl .
+docker rm "$id"
+```
+Колесо можно прикрепить к релизу GitHub и затем ссылаться на него через прямой URL в `[project.optional-dependencies.flash]` (см. docs/development_process.md).
+
+### Отладка ошибок сборки
+Если шаг сборки `flash-attn` завершается ошибкой, запустите интерактивную оболочку на предыдущем слое:
+```bash
+docker build -f docker/Dockerfile-cu124-uv --target wheel-dev --progress=plain .
+# взять ID образа шага перед ошибкой
+docker run -it <imageID> bash
+```
+Полезные советы приведены в статье Docker «How to debug build failures».
+
 ## FAQ
 
 **Q: Зачем два отдельных `uv.lock` (корневой и `prod/uv.lock`)?**
