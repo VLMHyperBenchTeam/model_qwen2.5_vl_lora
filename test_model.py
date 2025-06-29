@@ -32,31 +32,8 @@ def load_config(config_path: str = "config_test_model.json") -> dict:
     Returns:
         Словарь с конфигурацией
     """
-    try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print(f"❌ ОШИБКА: Файл конфигурации не найден: {config_path}")
-        # Fallback конфигурация
-        return {
-            "task": {
-                "image_path": "dataset/passport/images/clean/0.jpg",
-                "prompt": "Опиши документ.",
-                "show_gpu_info": True
-            },
-            "model": {
-                "model_name": "Qwen2.5-VL-3B-Instruct",
-                "device_map": "cuda:0",
-                "cache_dir": "./model_cache",
-                "system_prompt": ""
-            },
-            "test_settings": {
-                "verbose": True
-            }
-        }
-    except json.JSONDecodeError as e:
-        print(f"❌ ОШИБКА при парсинге JSON: {e}")
-        return {}
+    with open(config_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
 
 def test_model(
@@ -107,73 +84,64 @@ def test_model(
         print_error(f"Изображение не найдено: {image_path}")
         return None
 
-    try:
-        # Выводим информацию о задаче
-        print_section("ПАРАМЕТРЫ ТЕСТИРОВАНИЯ")
-        print_info(f"Модель: {model_name}")
-        print_info(f"Устройство: {device_map}")
-        print_info(f"Изображение: {image_path}")
-        print_info(f"Промпт: {prompt}")
+    # Выводим информацию о задаче
+    print_section("ПАРАМЕТРЫ ТЕСТИРОВАНИЯ")
+    print_info(f"Модель: {model_name}")
+    print_info(f"Устройство: {device_map}")
+    print_info(f"Изображение: {image_path}")
+    print_info(f"Промпт: {prompt}")
 
-        # Инициализация модели
-        print_section("ИНИЦИАЛИЗАЦИЯ МОДЕЛИ")
-        print_info("Загрузка модели... (это может занять некоторое время)")
+    # Инициализация модели
+    print_section("ИНИЦИАЛИЗАЦИЯ МОДЕЛИ")
+    print_info("Загрузка модели... (это может занять некоторое время)")
 
-        # Подавляем технические логи если нужно
-        show_tech_logs = test_settings.get("show_technical_logs", False)
-        if not show_tech_logs:
-            # Подавляем предупреждения и технические логи
-            import sys
-            import warnings
-            from io import StringIO
-            warnings.filterwarnings("ignore")
-            old_stdout = sys.stdout
-            sys.stdout = StringIO()
+    import contextlib
+    import warnings
+    from io import StringIO
 
-        try:
+    show_tech_logs = test_settings.get("show_technical_logs", False)
+
+    if show_tech_logs:
+        model = ModelFactory.initialize_qwen_model(
+            model_name=model_name,
+            cache_dir=str(cache_dir),
+            device_map=device_map,
+            system_prompt=model_config.get("system_prompt", "")
+        )
+    else:
+        warnings.filterwarnings("ignore")
+        buffer = StringIO()
+        with contextlib.redirect_stdout(buffer):
             model = ModelFactory.initialize_qwen_model(
                 model_name=model_name,
                 cache_dir=str(cache_dir),
                 device_map=device_map,
                 system_prompt=model_config.get("system_prompt", "")
             )
-        finally:
-            # Восстанавливаем вывод
-            if not show_tech_logs:
-                sys.stdout = old_stdout
-                warnings.resetwarnings()
+        warnings.resetwarnings()
 
-        print_success("Модель успешно загружена!")
+    print_success("Модель успешно загружена!")
 
-        # Тестирование модели
-        print_section("ОБРАБОТКА ИЗОБРАЖЕНИЯ")
-        print_info("Анализ изображения...")
+    # Тестирование модели
+    print_section("ОБРАБОТКА ИЗОБРАЖЕНИЯ")
+    print_info("Анализ изображения...")
 
-        # Вызываем метод (реальная реализация использует параметр image, не image_path)
-        model_answer = model.predict_on_image(image=image_path, prompt=prompt)
+    model_answer = model.predict_on_image(image=image_path, prompt=prompt)
 
-        print_success("Анализ завершен!")
+    print_success("Анализ завершен!")
 
-        # Выводим результат
-        print_result(model_answer)
+    print_result(model_answer)
 
-        if show_gpu_info:
-            show_gpu_status()
+    if show_gpu_info:
+        show_gpu_status()
 
-        return model_answer
-
-    except Exception as e:
-        print_error(f"Ошибка при работе с моделью: {e}")
-        return None
+    return model_answer
 
 
 def show_gpu_status() -> None:
     """Показывает информацию о состоянии GPU."""
     print_section("ИНФОРМАЦИЯ О GPU")
-    try:
-        subprocess.run(["nvidia-smi"], check=False)
-    except FileNotFoundError:
-        print_error("nvidia-smi не найден. Возможно, NVIDIA драйверы не установлены.")
+    subprocess.run(["nvidia-smi"], check=False)
 
 
 def main():
