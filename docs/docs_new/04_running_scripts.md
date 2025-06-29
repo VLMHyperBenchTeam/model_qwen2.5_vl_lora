@@ -23,7 +23,7 @@ uv run --with "torch==2.3.0" python my_bench.py    # временно друга
 ## 2. Классический способ — активировать `.venv`
 
 ```bash
-uv sync                       # убедиться, что всё установлено
+uv sync --extra cu124   # убедиться, что всё установлено
 source .venv/bin/activate     # Linux/macOS
 # .venv\Scripts\activate     # Windows PowerShell
 python check_classifiication.py
