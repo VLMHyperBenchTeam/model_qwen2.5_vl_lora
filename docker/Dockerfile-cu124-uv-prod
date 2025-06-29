@@ -1,0 +1,77 @@
+###############################################################################
+# 1)  Базовый образ и общие тулзы
+###############################################################################
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04 AS base
+
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+        build-essential git git-lfs \
+        python3 python3-distutils python3-pip wget curl pkg-config \
+        libsndfile1 ninja-build && \
+    rm -rf /var/lib/apt/lists/*
+RUN ln -s /usr/bin/python3 /usr/bin/python
+RUN git lfs install
+
+# ---- ставим статический бинарь uv (без Python-зависимостей) ----
+ENV UV_VERSION=0.7.16
+RUN curl -LsSf https://astral.sh/uv/${UV_VERSION}/install.sh | sh
+ENV PATH=/root/.local/bin:$PATH
+
+###############################################################################
+# 2)  Стадия «deps»: ставим всё из uv.lock, КРОМЕ flash-attn
+###############################################################################
+FROM base AS deps
+WORKDIR /build
+
+# Prod-pyproject и lock-файл (flash-attn пока отсутствует)
+COPY prod/pyproject.toml prod/uv.lock ./
+
+# Синхронизируем окружение согласно prod/uv.lock
+RUN uv sync --locked
+
+###############################################################################
+# 3)  Стадия «wheel»: собираем flash-attn
+###############################################################################
+FROM deps AS wheel
+WORKDIR /build
+
+# Ставим CMake, если нужен конкретный >=3.25
+ARG CMAKE_VERSION=3.26.1
+RUN curl -LO https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/cmake-$CMAKE_VERSION-linux-x86_64.sh \
+    && chmod +x cmake-$CMAKE_VERSION-linux-x86_64.sh \
+    && ./cmake-$CMAKE_VERSION-linux-x86_64.sh --skip-license --prefix=/usr/local \
+    && rm cmake-$CMAKE_VERSION-linux-x86_64.sh
+
+# отключаем build-isolation, чтобы сборка шла в текущем .venv
+ENV UV_NO_BUILD_ISOLATION=1
+# все операции выполняем через `uv`, чтобы пакеты ставились внутрь .venv
+RUN uv pip install --no-cache-dir packaging && \
+    mkdir -p /wheelhouse && \
+    uv run python -m pip wheel flash-attn==2.6.1 \
+        --no-deps --no-build-isolation -w /wheelhouse
+
+###############################################################################
+# 4)  Прод-стадия: лёгкий рантайм + наш wheel
+###############################################################################
+FROM base AS prod
+WORKDIR /workspace
+
+# переопределяем ARG / ENV, т.к. они не наследуются из предыдущих стадий
+ARG CMAKE_VERSION=3.26.1
+
+# Prod-pyproject и lock-файл (flash-attn пока отсутствует)
+COPY prod/pyproject.toml prod/uv.lock ./
+
+# Синхронизируем окружение согласно prod/uv.lock
+RUN uv sync --locked
+
+# после sync основной Python – из .venv
+ENV PATH="/workspace/.venv/bin:${PATH}"
+
+# (а) prod-pyproject и lock уже скопированы и применены выше
+# (б) Копируем собранный wheel и устанавливаем его напрямую (не меняя lock)
+COPY --from=wheel /wheelhouse/flash_attn*.whl /tmp/
+RUN uv pip install --no-deps /tmp/flash_attn*.whl
+
+CMD ["/bin/bash"]
