@@ -1,8 +1,13 @@
 # Добавление собственных пакетов
 
-Алгоритм подключения нового или существующего пакета в workspace.
+Подключение нового или существующего пакета в **трёх workspace**: *dev*, *staging* и *prod*.
 
-## 1. Существующий пакет в каталоге `packages/*`
+> Перед выполнением команд убедитесь, что окружение создано с выбранным CUDA-бэкендом PyTorch (см. 09_torch_backends.md):
+> ```bash
+> uv sync --extra cu124   # или cu128
+> ```
+
+## 1. dev-сборка (packages/* в режиме workspace)
 
 1. Скопировать пакет в `packages/<pkg>` (должен содержать `pyproject.toml`).
 1. Убедиться, что в корневом `pyproject.toml` пакет объявлен в `[tool.uv.sources]`:
@@ -11,35 +16,42 @@
    hello-world = { workspace = true }
    ```
 1. При необходимости добавить пакет в `[project].dependencies` там, где он используется.
-1. Обновить окружение:
+1. Обновить окружение dev:
    ```bash
-   uv sync --all-packages
+   uv sync --extra cu124 --all-packages   # или cu128
    ```
 
-## 2. Создать новый пакет с нуля
+## 2. staging-сборка (фиксация dev-тегов)
 
-```bash
-uv init packages/my_cool_lib
-```
+После того как пакет получил dev-тег (например `v0.1.0.dev0`):
 
-Команда сгенерирует структуру проекта и автоматически добавит каталог в workspace.
+1. Откройте `staging/pyproject.toml` и добавьте источник Git:
+   ```toml
+   [tool.uv.sources]
+   hello-world = { git = "https://github.com/USER/hello_world", tag = "v0.1.0.dev0", subdirectory = "." }
+   ```
+2. Пересчитайте и установите окружение staging:
+   ```bash
+   uv lock --project staging
+   uv sync --project staging --frozen --extra cu124   # или cu128
+   ```
 
-## 3. Проверка установки
+## 3. prod-сборка (стабильный релиз)
 
-```bash
-uv run python -c 'import hello_world; print("Импорт успешен!")'
-```
-
-## 4. Подключение пакета в prod-сборку
-
-В `pyproject.prod.toml` задайте источник Git:
+В `prod/pyproject.toml` укажите стабильный Git-тег:
 
 ```toml
 [tool.uv.sources]
-hello-world = { git = "https://github.com/USER/hello_world", tag = "0.0.2", subdirectory = "." }
+hello-world = { git = "https://github.com/USER/hello_world", tag = "v0.1.0", subdirectory = "." }
 ```
 
-## 5. Git submodules
+Далее:
+```bash
+uv lock --project prod
+uv sync --project prod --frozen --extra cu124   # или cu128
+```
+
+## 4. Git submodules
 
 Все внутренние пакеты подключаются как submodule, что позволяет:
 
@@ -60,7 +72,6 @@ git submodule deinit -f packages/old_pkg && git rm -f packages/old_pkg  # уда
 ```
 
 > После добавления нового submodule не забудьте выполнить:
->
 > ```bash
 > git submodule update --init
 > ```
