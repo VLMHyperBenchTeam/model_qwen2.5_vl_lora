@@ -1,7 +1,7 @@
 [project]
 name = "vlm-hyperbench"
 version = "0.0.3"
-requires-python = ">=3.10"
+requires-python = ">=3.10, !=3.11.*, <3.13"
 dependencies = [
     "bench-utils",
     "model-interface",
@@ -22,11 +22,21 @@ model-qwen2-5-vl = { workspace = true }
 prompt-handler = { workspace = true }
 print-utils = { workspace = true }
 hello-world = { workspace = true }
-release-tool = { workspace = true }
+release-tool = { path = "release_tool" }
+
+# источники PyTorch/torchvision для разных backend-экстра
+torch = [
+  { index = "pytorch-cu124", extra = "cu124" },
+  { index = "pytorch-cu128", extra = "cu128" },
+]
+torchvision = [
+  { index = "pytorch-cu124", extra = "cu124" },
+  { index = "pytorch-cu128", extra = "cu128" },
+]
 
 [tool.uv.workspace]
 # все пакеты, лежащие в каталогах packages/* (каждый должен содержать собственный pyproject.toml)
-members = ["packages/*", "release_tool"]
+members = ["packages/*"]
 
 [build-system]
 requires = ["hatchling"]
@@ -44,6 +54,8 @@ ignore = ["E501", "E402"]
 
 [project.optional-dependencies]
 # оставляем только extras для публикации (если нужны)
+cu124 = ["torch>=2.4,<2.8", "torchvision>=0.19,<0.23"]
+cu128 = ["torch>=2.4,<2.8", "torchvision>=0.19,<0.23"]
 
 [dependency-groups]
 dev = [
@@ -51,6 +63,7 @@ dev = [
     "pre-commit>=3.7.0",
     "mypy>=1.9",
     "release-tool",
+    "mdformat>=0.7.22",
 ]
 
 [tool.mypy]
@@ -72,3 +85,25 @@ disable_error_code = [
     "no-any-return",
     "unused-ignore",
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv]
+environments = [
+  "sys_platform == 'linux' and python_version >= '3.10' and python_version < '3.11'",
+  "sys_platform == 'linux' and python_version >= '3.12' and python_version < '3.13'",
+]
+conflicts = [[{ extra = "cu124" }, { extra = "cu128" }]]

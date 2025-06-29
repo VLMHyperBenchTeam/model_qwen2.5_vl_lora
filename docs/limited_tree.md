@@ -5,16 +5,19 @@
 ## Как использовать limited_tree.py:
 
 **1. Текущая директория:**
+
 ```bash
 python limited_tree.py
 ```
 
 **2. Указать свою директорию:**
+
 ```bash
 python limited_tree.py /path/to/directory
 ```
 
 **3. Примеры:**
+
 ```bash
 # Показать структуру dataset
 python limited_tree.py ./dataset
@@ -28,6 +31,7 @@ python limited_tree.py ./dataset
 - **Счетчик**: показывает сколько элементов скрыто (например, "... (10 more)")
 
 ## Пример вывода:
+
 ```
 ./dataset
 ├── invoice
