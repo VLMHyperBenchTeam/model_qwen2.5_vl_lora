@@ -57,6 +57,9 @@ def build_report(config_path: Path, output_path: Path) -> None:
 
     prompt_path = task_cfg.get("prompt_path")
 
+    # Получаем model_name из новой структуры конфигурации
+    model_name = model_cfg.get("common_params", {}).get("model_name") or model_cfg.get("model_name", "unknown_model")
+
     md_lines: List[str] = [HEADER, ""]
 
     # --- Параметры задачи ---
@@ -70,10 +73,24 @@ def build_report(config_path: Path, output_path: Path) -> None:
 
     # --- Параметры модели ---
     _append_md_section(md_lines, "Параметры модели")
-    md_lines.append(f"* **Модель:** `{model_cfg['model_name']}`")
-    # Выводим остальные поля конфигурации модели (кроме имени)
+    md_lines.append(f"* **Модель:** `{model_name}`")
+
+    # Выводим параметры из common_params
+    if "common_params" in model_cfg:
+        for key, value in model_cfg["common_params"].items():
+            if key == "model_name":
+                continue
+            md_lines.append(f"* **{key}:** {value}")
+
+    # Выводим параметры из specific_params
+    if "specific_params" in model_cfg:
+        md_lines.append("* **Специфичные параметры:**")
+        for key, value in model_cfg["specific_params"].items():
+            md_lines.append(f"  * **{key}:** {value}")
+
+    # Выводим остальные поля конфигурации модели (для обратной совместимости)
     for key, value in model_cfg.items():
-        if key == "model_name":
+        if key in ["model_name", "common_params", "specific_params"]:
             continue
         md_lines.append(f"* **{key}:** {value}")
 
@@ -93,7 +110,7 @@ def build_report(config_path: Path, output_path: Path) -> None:
         md_lines.append(f"| {k} | {v} |")
 
     # --- Определяем run_id по имеющимся CSV-файлам ---
-    model_name_clean = model_cfg["model_name"].replace(" ", "_")
+    model_name_clean = model_name.replace(" ", "_")
     prompt_name = Path(prompt_path).stem if prompt_path else "prompt"
 
     pattern = f"{model_name_clean}_{prompt_name}_*_final_classification_results.csv"
@@ -104,7 +121,7 @@ def build_report(config_path: Path, output_path: Path) -> None:
         run_id = latest_file.stem.replace("_final_classification_results", "")
     else:
         # Фоллбэк — без timestamp (совместимость)
-        run_id = get_run_id(model_cfg["model_name"])  # type: ignore
+        run_id = get_run_id(model_name)  # type: ignore
 
     # --- Итоговые метрики ---
     final_metrics_file = Path(f"{run_id}_final_classification_results.csv")
@@ -162,6 +179,8 @@ def build_report(config_path: Path, output_path: Path) -> None:
         md_lines.append(_df_to_md_table(cm_df))
 
     # --- Сохранение ---
+    # Создаём папку reports, если она не существует
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(md_lines), encoding="utf-8")
     print(f"✅ Отчёт сохранён в {output_path}")
 
@@ -172,11 +191,15 @@ if __name__ == "__main__":
 
     # Считываем конфиг, чтобы получить имена модели и промпта
     cfg = load_config(str(CONFIG_PATH))
-    model_name_clean = cfg["model"]["model_name"].replace(" ", "_")
+
+    # Получаем model_name из новой структуры конфигурации
+    model_name = cfg["model"].get("common_params", {}).get("model_name") or cfg["model"].get("model_name", "unknown_model")
+    model_name_clean = model_name.replace(" ", "_")
+
     prompt_name = Path(cfg["task"].get("prompt_path", "prompt")).stem
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    dyn_report_name = f"report_{model_name_clean}_{prompt_name}_{timestamp}.md"
+    dyn_report_name = f"reports/report_{model_name_clean}_{prompt_name}_{timestamp}.md"
 
     # Если явно указан путь в конфиге — используем его, иначе динамический
     report_section = cfg.get("report", {}) if isinstance(cfg, dict) else {}
