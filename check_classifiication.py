@@ -4,8 +4,10 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from bench_utils.metrics import calculate_classification_metrics
-from bench_utils.model_utils import initialize_model, load_prompt, prepare_prompt
+from bench_utils.model_utils import load_prompt, prepare_prompt
 from bench_utils.utils import load_config, save_results_to_csv
+from model_interface.model_factory import ModelFactory
+import model_qwen2_5_vl.models  # Импорт для автоматической регистрации модели  # noqa: F401
 from print_utils import (  # type: ignore
     print_error,
     print_header,
@@ -151,7 +153,7 @@ def calculate_and_save_confusion_matrix(
     cm = confusion_matrix(y_true, y_pred, labels=labels)
 
     # Преобразуем в DataFrame и округляем значения для наглядности
-    cm_df = pd.DataFrame(cm, index=labels, columns=labels).round(4)
+    cm_df = pd.DataFrame(cm, index=pd.Index(labels), columns=pd.Index(labels)).round(4)
 
     print_section(f"Confusion Matrix для сабсета {subset_name}")
     print(cm_df)
@@ -186,7 +188,7 @@ def calculate_and_save_class_report(
         all_classes.append("None")
 
     report = classification_report(
-        y_true, y_pred, labels=all_classes, output_dict=True, zero_division=0
+        y_true, y_pred, labels=all_classes, output_dict=True, zero_division=0.0
     )
 
     report_df = pd.DataFrame(report).transpose().round(4)
@@ -219,13 +221,13 @@ def run_evaluation(config: Dict[str, Any]) -> None:
     print_info(f"Subsets: {', '.join(task_config['subsets'])}")
     if task_config.get("sample_size"):
         print_info(f"Sample size: {task_config['sample_size']}")
-    print_info(f"Модель: {model_config['model_name']}")
+    print_info(f"Модель: {model_config['common_params']['model_name']}")
 
     dataset_path = Path(task_config["dataset_path"])
     prompt_path = Path(task_config["prompt_path"])
     sample_size = task_config.get("sample_size")
 
-    model = initialize_model(model_config)
+    model = ModelFactory.initialize_model(model_config)
 
     template = load_prompt(prompt_path)
     classes_str = ", ".join(
@@ -234,7 +236,7 @@ def run_evaluation(config: Dict[str, Any]) -> None:
     prompt = prepare_prompt(template, classes=classes_str)
 
     # Формируем уникальный run_id = <model>_<prompt>_<YYYYMMDD_HHMMSS>
-    model_name_clean = model_config["model_name"].replace(" ", "_")
+    model_name_clean = model_config["common_params"]["model_name"].replace(" ", "_")
     prompt_name = prompt_path.stem
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     run_id = f"{model_name_clean}_{prompt_name}_{timestamp}"
@@ -284,10 +286,16 @@ def run_evaluation(config: Dict[str, Any]) -> None:
         final_df = pd.DataFrame(all_metrics)
         avg_metrics = final_df.mean()
         print_section("Средние метрики по всем сабсетам")
-        print_info(f"Средняя точность (Accuracy): {avg_metrics['accuracy']:.4f}")
-        print_info(f"Средний F1-score: {avg_metrics['f1']:.4f}")
-        print_info(f"Средняя точность (Precision): {avg_metrics['precision']:.4f}")
-        print_info(f"Средний отзыв (Recall): {avg_metrics['recall']:.4f}")
+        # Безопасный доступ к метрикам
+        accuracy = avg_metrics.get('accuracy', 0) if 'accuracy' in avg_metrics else 0  # type: ignore
+        f1 = avg_metrics.get('f1', 0) if 'f1' in avg_metrics else 0  # type: ignore
+        precision = avg_metrics.get('precision', 0) if 'precision' in avg_metrics else 0  # type: ignore
+        recall = avg_metrics.get('recall', 0) if 'recall' in avg_metrics else 0  # type: ignore
+
+        print_info(f"Средняя точность (Accuracy): {accuracy:.4f}")
+        print_info(f"Средний F1-score: {f1:.4f}")
+        print_info(f"Средняя точность (Precision): {precision:.4f}")
+        print_info(f"Средний отзыв (Recall): {recall:.4f}")
 
         out_file = f"{run_id}_final_classification_results.csv"
         final_df.to_csv(out_file, index=False)
