@@ -646,30 +646,30 @@ uv sync   --project prod --extra cu128 --frozen
 
 ### Docker: dev и prod образы под разные backend-варианты
 
-`docker/Dockerfile-cu124-uv` умеет переключаться между CUDA-вариантами с помощью build-arg `TORCH_BACKEND`.
+Dockerfile-uv умеет переключаться между CUDA-вариантами с помощью build-arg `TORCH_BACKEND`.
 Примеры команд:
 
 ```bash
 # dev-образ: CUDA 12.4
-docker build -f docker/Dockerfile-cu124-uv \
+docker build -f docker/Dockerfile-uv \
   --target dev \
   --build-arg TORCH_BACKEND=cu124 \
   -t project:dev-cu124 .
 
 # dev-образ: CUDA 12.8
-docker build -f docker/Dockerfile-cu124-uv \
+docker build -f docker/Dockerfile-uv \
   --target dev \
   --build-arg TORCH_BACKEND=cu128 \
   -t project:dev-cu128 .
 
 # prod-образ: CUDA 12.4
-docker build -f docker/Dockerfile-cu124-uv \
+docker build -f docker/Dockerfile-uv \
   --target prod \
   --build-arg TORCH_BACKEND=cu124 \
   -t project:prod-cu124 .
 
 # prod-образ: CUDA 12.8
-docker build -f docker/Dockerfile-cu124-uv \
+docker build -f docker/Dockerfile-uv \
   --target prod \
   --build-arg TORCH_BACKEND=cu128 \
   -t project:prod-cu128 .

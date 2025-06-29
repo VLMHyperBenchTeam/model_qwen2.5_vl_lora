@@ -1,8 +1,8 @@
-# Документация по `docker/Dockerfile-cu124-uv`
+# Документация по `docker/Dockerfile-uv`
 
 ## Общая идея
 
-`Dockerfile-cu124-uv` — это **универсальный Docker-рецепт**, который позволяет собирать как *разработческое* (dev), так и *продакшен* (prod) окружения из одного файла. Он решает сразу несколько задач:
+`Dockerfile-uv` — это **универсальный Docker-рецепт**, который позволяет собирать как *разработческое* (dev), так и *продакшен* (prod) окружения из одного файла. Он решает сразу несколько задач:
 
 1. **Повторяемость окружения**: сборка выполняется строго по `uv.lock`, что гарантирует идентичные версии библиотек.
 2. **Гибкость**: CUDA-версия, вариант базового образа (`runtime | cudnn | base`) и версия CMake передаются через `--build-arg`, поэтому образ можно быстро адаптировать под разные GPU-серверы.
@@ -53,7 +53,7 @@
 # сборка dev-образа с параметрами по умолчанию
 
 docker build \
-  -f docker/Dockerfile-cu124-uv \
+  -f docker/Dockerfile-uv \
   --build-arg CUDA_VERSION=12.4.1 \
   --build-arg CUDA_VARIANT=cudnn \
   --build-arg UBUNTU_VERSION=22.04 \
@@ -70,7 +70,7 @@ docker build \
 ```bash
 # соберёт dev-слой и финальный dev-образ
 docker build \
-  -f docker/Dockerfile-cu124-uv \
+  -f docker/Dockerfile-uv \
   --target dev \
   -t myproj:dev-cu124 \
   --build-arg CUDA_VERSION=12.4.1 \
@@ -81,7 +81,7 @@ docker build \
 ### 2. Prod-образ под CUDA 12.4 без cuDNN
 ```bash
 docker build \
-  -f docker/Dockerfile-cu124-uv \
+  -f docker/Dockerfile-uv \
   --target prod \
   -t myproj:prod-cu124-runtime \
   --build-arg CUDA_VARIANT=runtime \
@@ -91,7 +91,7 @@ docker build \
 ### 3. Образ под CUDA 12.8 (cu128)
 ```bash
 docker build \
-  -f docker/Dockerfile-cu124-uv \
+  -f docker/Dockerfile-uv \
   --target dev \
   -t myproj:dev-cu128 \
   --build-arg CUDA_VERSION=12.8.0 \
@@ -144,7 +144,7 @@ docker rm "$id"
 ### Отладка ошибок сборки
 Если шаг сборки `flash-attn` завершается ошибкой, запустите интерактивную оболочку на предыдущем слое:
 ```bash
-docker build -f docker/Dockerfile-cu124-uv --target wheel-dev --progress=plain .
+docker build -f docker/Dockerfile-uv --target wheel-dev --progress=plain .
 # взять ID образа шага перед ошибкой
 docker run -it <imageID> bash
 ```
@@ -185,7 +185,7 @@ uv lock --extra cu128 -o uv-cu128.lock
 
 ```bash
 # Пример для CUDA 12.4
-docker build -f docker/Dockerfile-cu124-uv \
+docker build -f docker/Dockerfile-uv \
   --target dev \
   -t myproj:dev-cu124 \
   --build-arg TORCH_BACKEND=cu124 \

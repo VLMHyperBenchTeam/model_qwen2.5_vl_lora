@@ -6,8 +6,8 @@
 #  • prod-сборка использует prod/pyproject.toml + prod/uv.lock (без src).   #
 #                                                                            #
 #  Сборка:                                                                   #
-#    docker build -f docker/Dockerfile-cu124-uv --target dev  -t image:dev . #
-#    docker build -f docker/Dockerfile-cu124-uv --target prod -t image:prod .#
+#    docker build -f docker/Dockerfile-uv --target dev  -t image:dev .       #
+#    docker build -f docker/Dockerfile-uv --target prod -t image:prod .      #
 ###############################################################################
 
 ######################## 0. Параметры ########################################
@@ -55,7 +55,7 @@ RUN uv sync --locked
 ###############################################################################
 # 3. wheel-dev: сборка flash-attn в dev-env
 ###############################################################################
-FROM deps-dev AS wheel-dev
+FROM deps-devp AS wheel-dev
 WORKDIR /build
 ARG CMAKE_VERSION
 RUN curl -LO https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.sh \
@@ -90,7 +90,7 @@ RUN uv pip install --no-cache-dir pip packaging psutil pybind11 && \
 ###############################################################################
 # 4.a Финальный образ DEV
 ###############################################################################
-FROM deps-dev AS dev
+FROM deps-devp AS dev
 WORKDIR /workspace
 # Копируем исходники для разработки
 COPY . .
