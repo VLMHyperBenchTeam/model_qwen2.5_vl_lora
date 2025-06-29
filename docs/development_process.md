@@ -710,3 +710,29 @@ uv python pin 3.12   # создаст/обновит файл .python-version
 > `--python-version` нет, поэтому команды вида `uv sync --python-version 3.12`
 > завершатся ошибкой «unexpected argument».  Проверяйте подсказку `--help` при
 > обновлении инструмента.
+
+### Как это устроено
+
+* Внутренние пакеты (например `model-qwen2_5-vl`) содержат лишь абстрактную зависимость `torch>=2.4,<2.8`, без суффиксов `+cu…`. Таким образом один и тот же исходный код подходит и для CPU, и для разных сборок CUDA.
+* Конкретный backend (cu124, cu128 или cpu) задаётся ТОЛЬКО в корневом `pyproject.toml` через `[tool.uv.sources]` **или** переменной окружения `UV_TORCH_BACKEND`.
+* Значения в `tool.uv.sources` корня переопределяют любые источники, объявленные во вложенных пакетах workspace.
+* Lock-файл фиксирует именно те колёса (`torch==…+cu124`, `torchvision==…+cu128` …), которые выбраны во время `uv lock`.  Если параллельно поддерживаются несколько backend-ов, заведите отдельные lock-файлы (`uv-cu124.lock`, `uv-cu128.lock`) или пересчитывайте lock в CI.
+
+#### Быстрый способ переключения backend-а
+```bash
+export UV_TORCH_BACKEND=cu128   # cpu | cu124 | cu128
+uv sync --locked                # возьмёт нужные колёса без правки файлов
+```
+Этот приём особенно удобен в Dockerfile:
+```Dockerfile
+ARG TORCH_BACKEND=cu124
+ENV UV_TORCH_BACKEND=${TORCH_BACKEND}
+RUN uv sync --locked
+```
+
+#### Установка опубликованного пакета из PyPI
+Если пакет будет загружен на PyPI с optional-extras, пользователь сможет выбрать вариант так:
+```bash
+pip install model-qwen2-5-vl[cu124] \
+  --extra-index-url=https://download.pytorch.org/whl/cu124
+```
